@@ -56,29 +56,40 @@ object EquityCalculator {
         samples: Int = 4000,
         random: Random = Random(7),
     ): Equity {
-        val remaining = Deck.without(hero + villain + board)
+        val remaining = Deck.without(hero + villain + board).map(FastEval::index).toIntArray()
         val need = 5 - board.size
+        val a = IntArray(7)
+        val b = IntArray(7)
+        a[0] = FastEval.index(hero[0]); a[1] = FastEval.index(hero[1])
+        b[0] = FastEval.index(villain[0]); b[1] = FastEval.index(villain[1])
+        board.forEachIndexed { i, c -> a[2 + i] = FastEval.index(c); b[2 + i] = a[2 + i] }
         var win = 0
         var tie = 0
         var total = 0
-        fun score(runout: List<Card>) {
-            val full = board + runout
-            val h = HandEvaluator.evaluate(hero + full)
-            val v = HandEvaluator.evaluate(villain + full)
-            val c = h.compareTo(v)
+        fun score() {
+            val c = FastEval.score(a, 7).compareTo(FastEval.score(b, 7))
             if (c > 0) win++ else if (c == 0) tie++
             total++
         }
-        if (need <= 2) {
-            if (need == 0) score(emptyList()) else forEachCombination(remaining, need) { score(it) }
-        } else {
-            val pool = remaining.toMutableList()
-            repeat(samples) {
-                for (i in 0 until need) {
-                    val j = i + random.nextInt(pool.size - i)
-                    val t = pool[i]; pool[i] = pool[j]; pool[j] = t
+        val first = 2 + board.size
+        when {
+            need == 0 -> score()
+            need == 1 -> for (x in remaining) { a[first] = x; b[first] = x; score() }
+            need == 2 -> for (i in remaining.indices) for (j in i + 1 until remaining.size) {
+                a[first] = remaining[i]; b[first] = remaining[i]
+                a[first + 1] = remaining[j]; b[first + 1] = remaining[j]
+                score()
+            }
+            else -> {
+                val pool = remaining.copyOf()
+                repeat(samples) {
+                    for (i in 0 until need) {
+                        val j = i + random.nextInt(pool.size - i)
+                        val t = pool[i]; pool[i] = pool[j]; pool[j] = t
+                        a[first + i] = pool[i]; b[first + i] = pool[i]
+                    }
+                    score()
                 }
-                score(pool.subList(0, need))
             }
         }
         return Equity(win.toDouble() / total, tie.toDouble() / total)
