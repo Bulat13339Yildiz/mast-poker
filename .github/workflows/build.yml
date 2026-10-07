@@ -1,0 +1,61 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests
+        run: ./gradlew :app:testDebugUnitTest --console=plain
+
+      - name: Release signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        if: env.KEYSTORE_BASE64 != ''
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          printf "storeFile=%s\nstorePassword=%s\nkeyAlias=mast\nkeyPassword=%s\n" \
+            "$RUNNER_TEMP/release.jks" "$KEYSTORE_PASSWORD" "$KEYSTORE_PASSWORD" > "$RUNNER_TEMP/keystore.properties"
+          echo "MAST_KEYSTORE_PROPERTIES=$RUNNER_TEMP/keystore.properties" >> "$GITHUB_ENV"
+
+      - name: Release APK
+        run: ./gradlew :app:assembleRelease --console=plain
+
+      - name: Size check
+        run: |
+          size=$(stat -c %s app/build/outputs/apk/release/app-release.apk)
+          echo "Release APK: $((size / 1024)) KB"
+          if [ "$size" -gt $((10 * 1024 * 1024)) ]; then echo "APK is larger than 10 MB"; exit 1; fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mast-apk
+          path: app/build/outputs/apk/release/app-release.apk
+
+      - name: GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk "mast-${GITHUB_REF_NAME}.apk"
+          gh release create "$GITHUB_REF_NAME" "mast-${GITHUB_REF_NAME}.apk" \
+            --title "Масть ${GITHUB_REF_NAME}" --notes "Установка: скачай APK на телефон и открой его. Android попросит разрешить установку из этого источника."
+        env:
+          GH_TOKEN: ${{ github.token }}

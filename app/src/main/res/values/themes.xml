@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="felt_deep">#FF042514</color>
+    <color name="felt">#FF0C5530</color>
+    <color name="gold">#FFD2AE5C</color>
+
+    <style name="Theme.Mast" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/felt_deep</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <style name="Theme.Mast.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/felt_deep</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+        <item name="postSplashScreenTheme">@style/Theme.Mast</item>
+    </style>
+</resources>
