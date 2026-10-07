@@ -24,7 +24,8 @@ object FeedbackBuilder {
         val pool = if (correct) goodHeadlines else badHeadlines
         val headline = pool[abs(q.prompt.hashCode() + q.explanation.length) % pool.size]
         // Generated questions already carry the engine's text; don't repeat it.
-        val extra = if (correct) null else whyNot(q, a)?.takeUnless { q.explanation.contains(it) }
+        // A range can pass with a few cells off — name them even then.
+        val extra = if (correct && q !is Question.BuildRange) null else whyNot(q, a)?.takeUnless { q.explanation.contains(it) }
         return Feedback(correct, headline, q.explanation, extra)
     }
 
@@ -41,6 +42,7 @@ object FeedbackBuilder {
         is Question.OrderHands -> "Правильный порядок: " + q.answer.joinToString(" → ") { it.ruName } + "."
         is Question.CountOuts -> Explainer.outs(q.hole, q.board, q.target)
         is Question.CallOrFold -> Explainer.potOdds(q.pot, q.call, q.outs, q.cardsToCome)
-        is Question.Favourite, is Question.OpenOrFold, is Question.Choice -> null
+        is Question.BuildRange -> (a as? Answer.Hands)?.let { Explainer.rangeDiff(q.target, it.selected) }
+        is Question.Favourite, is Question.OpenOrFold, is Question.Choice, is Question.PushOrFold -> null
     }
 }

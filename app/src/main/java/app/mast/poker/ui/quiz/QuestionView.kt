@@ -13,8 +13,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -32,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -43,12 +46,14 @@ import app.mast.poker.core.poker.HandDescriber
 import app.mast.poker.core.poker.HandEvaluator
 import app.mast.poker.core.poker.Showdown
 import app.mast.poker.practice.Answer
+import app.mast.poker.practice.Explainer
 import app.mast.poker.practice.Grader
 import app.mast.poker.ui.components.CardState
 import app.mast.poker.ui.components.DealtCard
 import app.mast.poker.ui.components.DealtCardRow
 import app.mast.poker.ui.components.OptionState
 import app.mast.poker.ui.components.OptionTile
+import app.mast.poker.ui.components.RangeGrid
 import app.mast.poker.ui.components.RichText
 import app.mast.poker.ui.components.shake
 import app.mast.poker.ui.theme.MastColors
@@ -86,6 +91,8 @@ fun QuestionView(state: QuestionState, key: Any, modifier: Modifier = Modifier, 
             is Question.CallOrFold -> CallOrFoldView(q, state, select)
             is Question.OpenOrFold -> OpenOrFoldView(q, state, key, select)
             is Question.Favourite -> FavouriteView(q, state, key, select)
+            is Question.BuildRange -> BuildRangeView(q, state)
+            is Question.PushOrFold -> PushOrFoldView(q, state, key, select)
         }
     }
 }
@@ -105,9 +112,9 @@ private fun pickState(index: Int, state: QuestionState): OptionState {
 private fun OptionsGrid(labels: List<String>, state: QuestionState, columns: Int, select: (Answer) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         labels.indices.chunked(columns).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 row.forEach { i ->
-                    OptionTile(labels[i], pickState(i, state), { select(Answer.Pick(i)) }, Modifier.weight(1f), enabled = !state.checked)
+                    OptionTile(labels[i], pickState(i, state), { select(Answer.Pick(i)) }, Modifier.weight(1f).fillMaxHeight(), enabled = !state.checked, centered = columns >= 3)
                 }
                 repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
             }
@@ -121,7 +128,7 @@ private fun ChoiceView(q: Question.Choice, state: QuestionState, key: Any, selec
         ContentVisual(it, key)
         Spacer(Modifier.height(18.dp))
     }
-    OptionsGrid(q.options, state, 1, select)
+    OptionsGrid(q.options, state, q.columns, select)
 }
 
 /** Hole cards and board in two labelled rows. */
@@ -323,13 +330,16 @@ private fun OutsView(q: Question.CountOuts, state: QuestionState, key: Any, sele
 private fun InfoCell(value: String, label: String, modifier: Modifier = Modifier) {
     Column(
         modifier
+            .fillMaxHeight()
             .clip(RoundedCornerShape(16.dp))
             .background(MastColors.Glass)
             .border(1.dp, MastColors.GlassStroke, RoundedCornerShape(16.dp))
-            .padding(vertical = 14.dp),
+            .padding(vertical = 14.dp, horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
-        Text(value, fontFamily = Playfair, fontWeight = FontWeight.Bold, fontSize = 26.sp, color = MastColors.GoldLight)
+        // Lining figures keep signs and digits on one height.
+        Text(value, style = TextStyle(fontFamily = Playfair, fontWeight = FontWeight.Bold, fontSize = 26.sp, fontFeatureSettings = "lnum"), color = MastColors.GoldLight)
         Text(label, style = MaterialTheme.typography.bodySmall, color = MastColors.TextSecondary, textAlign = TextAlign.Center)
     }
 }
@@ -352,12 +362,12 @@ private fun DecisionRow(yesLabel: String, noLabel: String, state: QuestionState,
 
 @Composable
 private fun CallOrFoldView(q: Question.CallOrFold, state: QuestionState, select: (Answer) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         InfoCell("${q.pot}", "банк со ставкой", Modifier.weight(1f))
         InfoCell("${q.call}", "нужно доплатить", Modifier.weight(1f))
     }
     Spacer(Modifier.height(10.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         InfoCell("${q.outs}", "аутов", Modifier.weight(1f))
         InfoCell("${q.cardsToCome}", if (q.cardsToCome == 1) "карта впереди" else "карты впереди", Modifier.weight(1f))
     }
@@ -415,6 +425,94 @@ private fun FavouriteView(q: Question.Favourite, state: QuestionState, key: Any,
             }
         }
     }
+}
+
+@Composable
+private fun BuildRangeView(q: Question.BuildRange, state: QuestionState) {
+    val selected = state.rangeSelection
+    if (!state.checked) {
+        Text(
+            "Над диагональю — одной масти (s), под ней — разных мастей (o), на диагонали — пары. Веди пальцем, чтобы отметить сразу несколько.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MastColors.TextMuted,
+        )
+        Spacer(Modifier.height(12.dp))
+    }
+    RangeGrid(
+        selected = selected,
+        target = if (state.checked) q.target else null,
+        onChange = if (state.checked) null else state::setRange,
+    )
+    Spacer(Modifier.height(12.dp))
+    if (!state.checked) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                if (selected.isEmpty()) "Пока ничего не отмечено" else Explainer.rangeSize(selected).replaceFirstChar { it.uppercase() },
+                style = MaterialTheme.typography.bodySmall,
+                color = MastColors.TextSecondary,
+                modifier = Modifier.weight(1f),
+            )
+            if (selected.isNotEmpty()) {
+                Text(
+                    "Сбросить",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MastColors.Gold,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { state.setRange(emptySet()) }
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                )
+            }
+        }
+    } else {
+        val overlap = (q.overlap(selected) * 100).roundToInt()
+        Text(
+            "Совпадение $overlap% — для зачёта нужно ${(Question.BuildRange.PASS * 100).roundToInt()}%",
+            style = MaterialTheme.typography.titleSmall,
+            color = if (q.isCorrect(selected)) MastColors.GoldLight else MastColors.Wrong,
+        )
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            LegendDot(MastColors.Gold, null, "верно")
+            LegendDot(MastColors.Wrong.copy(alpha = 0.85f), null, "лишняя")
+            LegendDot(MastColors.Gold.copy(alpha = 0.2f), MastColors.Wrong, "пропущена")
+        }
+    }
+}
+
+@Composable
+private fun LegendDot(fill: Color, stroke: Color?, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            Modifier
+                .size(12.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(fill)
+                .then(if (stroke != null) Modifier.border(1.5.dp, stroke, RoundedCornerShape(3.dp)) else Modifier),
+        )
+        Spacer(Modifier.width(5.dp))
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MastColors.TextSecondary)
+    }
+}
+
+@Composable
+private fun PushOrFoldView(q: Question.PushOrFold, state: QuestionState, key: Any, select: (Answer) -> Unit) {
+    BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        DealtCardRow(q.hole, cardWidthFor(5, maxWidth) * 1.1f, key)
+    }
+    Spacer(Modifier.height(18.dp))
+    Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        InfoCell("${Explainer.bb(q.stackBb)} BB", "твой стек", Modifier.weight(1f))
+        InfoCell("топ-${q.callPercent}%", "с ними большой блайнд уравняет", Modifier.weight(1f))
+    }
+    AnimatedVisibility(state.checked, enter = fadeIn() + expandVertically()) {
+        Row(Modifier.padding(top = 10.dp).height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            InfoCell("${Explainer.signedBb(q.evPush)} BB", "олл-ин в среднем", Modifier.weight(1f))
+            InfoCell("−0,5 BB", "пас", Modifier.weight(1f))
+        }
+    }
+    Spacer(Modifier.height(22.dp))
+    DecisionRow("Олл-ин", "Пас", state, select)
 }
 
 @Composable

@@ -76,6 +76,11 @@ class ContentIntegrityTest {
                 }
                 is Question.OpenOrFold -> assertDistinct(where, q.hole)
                 is Question.Favourite -> assertDistinct(where, q.hands.flatten() + q.board)
+                is Question.BuildRange -> assertTrue(where, q.target.isNotEmpty())
+                is Question.PushOrFold -> {
+                    assertDistinct(where, q.hole)
+                    assertTrue(where, q.stackBb > 0 && q.callChance in 0.0..1.0)
+                }
             }
         }
     }

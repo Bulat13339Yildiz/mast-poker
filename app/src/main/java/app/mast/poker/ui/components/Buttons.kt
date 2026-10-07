@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,6 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.mast.poker.ui.theme.LocalReducedMotion
 import app.mast.poker.ui.theme.MastColors
@@ -153,6 +155,7 @@ fun OptionTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    centered: Boolean = false,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -193,15 +196,15 @@ fun OptionTile(
     Box(
         modifier
             .fillMaxWidth()
-            .height(56.dp)
+            .heightIn(min = 56.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(RoundedCornerShape(16.dp))
             .background(fill)
             .border(1.5.dp, border, RoundedCornerShape(16.dp))
             .clickable(interaction, indication = null, enabled = enabled, role = Role.Button, onClick = onClick)
-            .padding(horizontal = 18.dp),
-        contentAlignment = Alignment.CenterStart,
+            .padding(horizontal = if (centered) 8.dp else 18.dp, vertical = 12.dp),
+        contentAlignment = if (centered) Alignment.Center else Alignment.CenterStart,
     ) {
-        RichText(text, style = MaterialTheme.typography.titleMedium, color = textColor)
+        RichText(text, style = MaterialTheme.typography.titleMedium, color = textColor, textAlign = if (centered) TextAlign.Center else null)
     }
 }

@@ -6,6 +6,7 @@ import app.mast.poker.core.poker.HandEvaluator
 import app.mast.poker.core.poker.Outs
 import app.mast.poker.core.poker.PotOdds
 import app.mast.poker.core.poker.Showdown
+import app.mast.poker.core.poker.StartingHand
 import app.mast.poker.core.poker.Suit
 
 data class Chapter(
@@ -15,7 +16,10 @@ data class Chapter(
     val subtitle: String,
     val suit: Suit,
     val lessons: List<Lesson>,
-)
+) {
+    /** Chapters 1–6 are the beginner course, 7+ the second level. */
+    val level: Int get() = if (number <= 6) 1 else 2
+}
 
 data class Lesson(
     val id: String,
@@ -50,6 +54,8 @@ sealed interface Visual {
     data object StartingHandsChart : Visual
     /** Two hands' equity recalculated street by street over a full [board]. */
     data class EquityStreets(val hero: List<Card>, val villain: List<Card>, val board: List<Card>) : Visual
+    /** A range on the 13×13 grid. */
+    data class Range(val hands: Set<StartingHand>, val caption: String? = null) : Visual
 }
 
 enum class Street(val ruName: String, val boardCards: Int) {
@@ -78,6 +84,8 @@ sealed interface Question {
         override val explanation: String,
         override val concept: Concept,
         val visual: Visual? = null,
+        /** Options per row; short numeric answers read better in a grid. */
+        val columns: Int = 1,
     ) : Question
 
     /** Name the best combination in [cards] (5..7). Answer comes from the evaluator. */
@@ -164,6 +172,40 @@ sealed interface Question {
         override val concept: Concept = Concept.STARTING_HANDS,
     ) : Question
 
+    /** Mark the hands of [target] on the 13×13 grid. Counted correct at [PASS] overlap or better. */
+    data class BuildRange(
+        override val prompt: String,
+        val target: Set<StartingHand>,
+        override val explanation: String,
+        override val concept: Concept = Concept.RANGES,
+    ) : Question {
+        fun overlap(selection: Set<StartingHand>): Double {
+            val union = (selection + target).size
+            return if (union == 0) 1.0 else (selection intersect target).size.toDouble() / union
+        }
+
+        fun isCorrect(selection: Set<StartingHand>): Boolean = overlap(selection) >= PASS
+
+        companion object {
+            const val PASS = 0.9
+        }
+    }
+
+    /** Short-stack shove or fold from the small blind against a stated calling range. */
+    data class PushOrFold(
+        override val prompt: String,
+        val hole: List<Card>,
+        val stackBb: Double,
+        val callPercent: Int,
+        val callChance: Double,
+        val equityWhenCalled: Double,
+        val evPush: Double,
+        override val explanation: String,
+        override val concept: Concept = Concept.TOURNAMENTS,
+    ) : Question {
+        val shouldPush: Boolean get() = evPush > -0.5
+    }
+
     /** Which of two hands is the favourite; [equity] is the first hand's share. */
     data class Favourite(
         override val prompt: String,
@@ -193,6 +235,14 @@ enum class Concept(val ruName: String) {
     EQUITY("Кто фаворит"),
     STRATEGY("Стратегия"),
     MINDSET("Банкролл и тилт"),
+    RANGES("Диапазоны"),
+    BET_SIZING("Размер ставок"),
+    COMBINATORICS("Комбинаторика"),
+    BLUFF_MATH("Математика блефа"),
+    EXPECTED_VALUE("Ожидаемый выигрыш"),
+    PREFLOP_ADV("3-бет и защита блайндов"),
+    TOURNAMENTS("Турниры"),
+    OPPONENTS("Типы соперников"),
 }
 
 enum class DrillType(val title: String, val subtitle: String, val concept: Concept) {
@@ -204,4 +254,12 @@ enum class DrillType(val title: String, val subtitle: String, val concept: Conce
     PREFLOP("Префлоп", "Играть руку или сбросить", Concept.STARTING_HANDS),
     EQUITY("Фаворит?", "У кого больше шансов на победу", Concept.EQUITY),
     HAND_SIM("Сыграй раздачу", "Полная раздача против соперника", Concept.STRATEGY),
+    RANGES("Собери диапазон", "Отметь руки в таблице 13×13", Concept.RANGES),
+    COMBOS("Комбинаторика", "Сколько комбинаций у соперника", Concept.COMBINATORICS),
+    BLUFF_MATH("Математика блефа", "Как часто должен работать блеф", Concept.BLUFF_MATH),
+    SIZING("Размер ставки", "Сколько ставить на этом борде", Concept.BET_SIZING),
+    PUSH_FOLD("Пуш или фолд", "Короткий стек: олл-ин или пас", Concept.TOURNAMENTS);
+
+    /** Quick single-tap drills get a 60-second blitz; slow ones are practice only. */
+    val hasBlitz: Boolean get() = this != HAND_SIM && this != RANGES
 }

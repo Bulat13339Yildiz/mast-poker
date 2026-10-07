@@ -1,6 +1,11 @@
 package app.mast.poker.content
 
 import app.mast.poker.core.poker.HandCategory
+import app.mast.poker.core.poker.HandClasses
+import app.mast.poker.core.poker.HandRange
+import app.mast.poker.core.poker.PreflopChart
+import app.mast.poker.core.poker.SeatGroup
+import app.mast.poker.core.poker.StartingHand
 import app.mast.poker.core.poker.cards
 import kotlin.random.Random
 
@@ -66,6 +71,10 @@ class LessonBuilder(private val lessonId: String) {
         steps += Step.Ask(Question.CallOrFold(prompt, pot, call, outs, cardsToCome, explanation.trimIndent()))
     }
 
+    fun buildRange(prompt: String, target: Set<StartingHand>, explanation: String) {
+        steps += Step.Ask(Question.BuildRange(prompt, target, explanation.trimIndent()))
+    }
+
     private fun seed(s: String) = (lessonId + s).hashCode()
     private fun cardsOrEmpty(spec: String) = if (spec.isBlank()) emptyList() else cards(spec)
 
@@ -88,3 +97,12 @@ fun cardRow(spec: String, highlight: String = "", caption: String? = null) =
     Visual.Cards(cards(spec), if (highlight.isBlank()) emptySet() else cards(highlight).toSet(), caption)
 
 fun duel(board: String, vararg hands: String) = Visual.Duel(cards(board), hands.map(::cards))
+
+/** "QQ+, AK" on the 13×13 grid. */
+fun rangeChart(spec: String, caption: String? = null) = Visual.Range(HandRange.parse(spec).hands, caption)
+
+/** The strongest [fraction] of all combos on the grid. */
+fun topRange(fraction: Double, caption: String? = null) = Visual.Range(HandRange.top(fraction).hands, caption)
+
+/** The beginner chart's opening range for [seat]. */
+fun openingRange(seat: SeatGroup): Set<StartingHand> = HandClasses.all.filter { PreflopChart.shouldOpen(it, seat) }.toSet()

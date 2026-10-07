@@ -75,6 +75,7 @@ import app.mast.poker.ui.components.DealerButton
 import app.mast.poker.ui.components.DealtCard
 import app.mast.poker.ui.components.DealtCardRow
 import app.mast.poker.ui.components.MiniCard
+import app.mast.poker.ui.components.RangeGrid
 import app.mast.poker.ui.components.RedChip
 import app.mast.poker.ui.components.drawChip
 import app.mast.poker.ui.theme.LocalReducedMotion
@@ -102,6 +103,10 @@ fun ContentVisual(visual: Visual, key: Any, modifier: Modifier = Modifier) {
         is Visual.PotMath -> PotMathVisual(visual.pot, visual.call, modifier)
         Visual.StartingHandsChart -> StartingHandsChart(modifier)
         is Visual.EquityStreets -> EquityStreetsVisual(visual.hero, visual.villain, visual.board, key, modifier)
+        is Visual.Range -> Column(modifier.fillMaxWidth()) {
+            RangeGrid(visual.hands)
+            Caption(visual.caption)
+        }
     }
 }
 

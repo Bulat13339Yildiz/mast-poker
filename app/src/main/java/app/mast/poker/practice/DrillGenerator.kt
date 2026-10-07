@@ -67,7 +67,10 @@ val Position.seatGroup: SeatGroup
 
 class DrillGenerator(private val random: Random = Random.Default) {
 
-    fun next(type: DrillType): DrillTask = when (type) {
+    private val advanced = AdvancedDrills(random)
+
+    /** [level] 1..3 sets the difficulty of the second-level drills; the basic ones ignore it. */
+    fun next(type: DrillType, level: Int = random.nextInt(1, 4)): DrillTask = when (type) {
         DrillType.NAME_HAND -> nameHand()
         DrillType.WINNER -> winner()
         DrillType.BEST_FIVE -> bestFive()
@@ -75,6 +78,11 @@ class DrillGenerator(private val random: Random = Random.Default) {
         DrillType.POT_ODDS -> potOdds()
         DrillType.PREFLOP -> preflop()
         DrillType.EQUITY -> equity()
+        DrillType.RANGES -> advanced.range(level)
+        DrillType.COMBOS -> advanced.combos(level)
+        DrillType.BLUFF_MATH -> advanced.bluffMath(level)
+        DrillType.SIZING -> advanced.sizing(level)
+        DrillType.PUSH_FOLD -> advanced.pushFold(level)
         DrillType.HAND_SIM -> error("The hand simulator has its own engine")
     }
 

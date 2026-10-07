@@ -6,16 +6,21 @@ import app.mast.poker.core.poker.Deck
 import app.mast.poker.core.poker.HandCategory
 import app.mast.poker.core.poker.HandDescriber
 import app.mast.poker.core.poker.HandEvaluator
+import app.mast.poker.core.poker.HandRange
 import app.mast.poker.core.poker.HandValue
 import app.mast.poker.core.poker.Outs
 import app.mast.poker.core.poker.PotOdds
+import app.mast.poker.core.poker.PushFold
 import app.mast.poker.core.poker.PreflopChart
+import app.mast.poker.core.poker.PreflopEquity
 import app.mast.poker.core.poker.Rank
 import app.mast.poker.core.poker.SeatGroup
 import app.mast.poker.core.poker.Showdown
 import app.mast.poker.core.poker.StartingHand
 import app.mast.poker.core.poker.Suit
 import app.mast.poker.practice.Exercises.Companion.plural
+import java.util.Locale
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
@@ -417,5 +422,71 @@ object Explainer {
         val k1 = if (h1.high == r) h1.low else h1.high
         val k2 = if (h2.high == r) h2.low else h2.high
         return "Общая карта — ${r.ruName}. Решает вторая карта: ${k1.ruName} против ${k2.ruGenitive}. ${m.text}"
+    }
+
+    // --- Ranges ------------------------------------------------------------------------
+
+    /** "12 рук — 64 комбинации, 4,8% всех раздач". */
+    fun rangeSize(hands: Set<StartingHand>): String {
+        val r = HandRange(hands)
+        val n = hands.size
+        return "$n ${plural(n, "рука", "руки", "рук")} — ${r.comboCount} ${plural(r.comboCount, "комбинация", "комбинации", "комбинаций")}, ${percent1(r.percent)} всех раздач"
+    }
+
+    fun range(title: String, target: Set<StartingHand>, note: String? = null): String {
+        val lines = mutableListOf("$title: ${HandRange(target).describe()}.", cap(rangeSize(target)) + ".")
+        note?.let { lines += it }
+        return lines.joinToString("\n")
+    }
+
+    /** Which hands were missed or added by mistake; null when the grid matches exactly. */
+    fun rangeDiff(target: Set<StartingHand>, selected: Set<StartingHand>): String? {
+        val missed = target - selected
+        val extra = selected - target
+        if (missed.isEmpty() && extra.isEmpty()) return null
+        fun list(hs: Set<StartingHand>): String {
+            val sorted = hs.sortedByDescending { PreflopEquity.of(it) }
+            val shown = sorted.take(12).joinToString(", ") { it.notation }
+            return if (sorted.size > 12) "$shown и ещё ${sorted.size - 12}" else shown
+        }
+        val lines = mutableListOf<String>()
+        if (missed.isNotEmpty()) lines += "Пропущены: ${list(missed)}."
+        if (extra.isNotEmpty()) lines += "Лишние: ${list(extra)}."
+        return lines.joinToString("\n")
+    }
+
+    // --- Push / fold --------------------------------------------------------------------
+
+    fun pushFold(stackBb: Double, callPercent: Int, r: PushFold.Result): String {
+        val s = stackBb
+        val whenCalled = 2 * s * r.equityWhenCalled - s
+        val combos = (r.callChance * 1225).roundToInt()
+        val lines = mutableListOf(
+            "Сбросит: ${percent1(1 - r.callChance)} — забираешь большой блайнд, +1 BB.",
+            "Уравняет: ${percent1(r.callChance)} ($combos из 1225 комбинаций). Против топ-$callPercent% у тебя ${percent1(r.equityWhenCalled)} эквити: " +
+                "банк ${bb(2 * s)} BB × ${percent1(r.equityWhenCalled)} − твои ${bb(s)} BB = ${signedBb(whenCalled)} BB.",
+            "Олл-ин в среднем: ${percent1(1 - r.callChance)} × 1 + ${percent1(r.callChance)} × (${signedBb(whenCalled)}) = ${signedBb(r.evPush)} BB.",
+            "Пас: −0,5 BB — малый блайнд уже в банке.",
+        )
+        lines += if (r.shouldPush) "Олл-ин выгоднее паса на ${bb(r.evPush - r.evFold)} BB — ставь всё."
+        else "Пас выгоднее: олл-ин в среднем теряет на ${bb(r.evFold - r.evPush)} BB больше."
+        return lines.joinToString("\n")
+    }
+
+    /** One decimal with a comma: 2,5. */
+    fun bb(x: Double): String = String.format(Locale.ROOT, "%.1f", abs(x)).replace('.', ',').removeSuffix(",0")
+
+    fun signedBb(x: Double): String {
+        val t = bb(x)
+        return when {
+            t == "0" -> "0"
+            x > 0 -> "+$t"
+            else -> "−$t"
+        }
+    }
+
+    private fun percent1(x: Double): String {
+        val t = String.format(Locale.ROOT, "%.1f", x * 100).replace('.', ',').removeSuffix(",0")
+        return "$t%"
     }
 }

@@ -75,8 +75,12 @@ fun LearnTab(nav: Nav, onOpenPractice: () -> Unit) {
         val due = p.dueMistakes(today)
         if (due.isNotEmpty()) item { ReviewCard(due.size) { nav.review() } }
         item { TipCard(p, today, nav) }
-        item { GoldLabel("Путь игрока", Modifier.padding(top = 8.dp)) }
-        items(Curriculum.chapters, key = { it.id }) { chapter -> ChapterTile(chapter, completed) { nav.chapter(chapter.id) } }
+        Curriculum.chapters.groupBy { it.level }.forEach { (level, chapters) ->
+            item(key = "level-$level") {
+                GoldLabel(if (level == 1) "Уровень 1 · Основы" else "Уровень 2 · Глубже в игру", Modifier.padding(top = 8.dp))
+            }
+            items(chapters, key = { it.id }) { chapter -> ChapterTile(chapter, completed) { nav.chapter(chapter.id) } }
+        }
     }
 }
 

@@ -49,6 +49,8 @@ import app.mast.poker.core.poker.Suit
 import app.mast.poker.progress.DrillMode
 import app.mast.poker.ui.LocalApp
 import app.mast.poker.ui.Nav
+import app.mast.poker.ui.components.AllInArt
+import app.mast.poker.ui.components.BluffArt
 import app.mast.poker.ui.components.CasinoChip
 import app.mast.poker.ui.components.DealerButton
 import app.mast.poker.ui.components.FannedCards
@@ -56,7 +58,9 @@ import app.mast.poker.ui.components.GlassPanel
 import app.mast.poker.ui.components.GoldLabel
 import app.mast.poker.ui.components.GreenChip
 import app.mast.poker.ui.components.MastIcons
+import app.mast.poker.ui.components.MiniRange
 import app.mast.poker.ui.components.PressablePanel
+import app.mast.poker.ui.components.SizingArt
 import app.mast.poker.ui.components.SuitBadge
 import app.mast.poker.ui.theme.MastColors
 import app.mast.poker.ui.theme.Motion
@@ -72,6 +76,11 @@ fun DrillArt(type: DrillType, size: Dp) {
         DrillType.PREFLOP -> FannedCards("Qc Js", size)
         DrillType.EQUITY -> Box(Modifier.size(size), contentAlignment = Alignment.Center) { CasinoChip(size * 0.85f, colors = GreenChip) }
         DrillType.HAND_SIM -> Box(Modifier.size(size), contentAlignment = Alignment.Center) { DealerButton(size * 0.6f) }
+        DrillType.RANGES -> Box(Modifier.size(size), contentAlignment = Alignment.Center) { MiniRange(size * 0.86f) }
+        DrillType.COMBOS -> FannedCards("Jh Jd", size)
+        DrillType.BLUFF_MATH -> BluffArt(size)
+        DrillType.SIZING -> SizingArt(size)
+        DrillType.PUSH_FOLD -> AllInArt(size)
     }
 }
 
@@ -196,7 +205,7 @@ private fun ModeSheet(type: DrillType, onPick: (DrillMode) -> Unit) {
         }
         Spacer(Modifier.height(16.dp))
         ModeOption("Практика", if (type == DrillType.HAND_SIM) "5 раздач с разбором каждого решения" else "10 заданий с подробным разбором", MastIcons.Learn) { onPick(DrillMode.PRACTICE) }
-        if (type != DrillType.HAND_SIM) {
+        if (type.hasBlitz) {
             Spacer(Modifier.height(10.dp))
             ModeOption("Блиц", "60 секунд — сколько успеешь", MastIcons.Timer) { onPick(DrillMode.BLITZ) }
         }

@@ -4,6 +4,7 @@ import app.mast.poker.content.Concept
 import app.mast.poker.content.Curriculum
 import app.mast.poker.content.DrillType
 import app.mast.poker.content.Question
+import app.mast.poker.content.Visual
 import app.mast.poker.core.poker.HandCategory
 import kotlin.random.Random
 
@@ -11,6 +12,8 @@ import kotlin.random.Random
 class Exercises(private val generator: DrillGenerator = DrillGenerator(), private val random: Random = Random.Default) {
 
     fun next(type: DrillType): Question = toQuestion(generator.next(type))
+
+    fun next(type: DrillType, level: Int): Question = toQuestion(generator.next(type, level))
 
     fun toQuestion(task: DrillTask): Question = when (task) {
         is DrillTask.NameHand -> Question.NameHand(
@@ -66,6 +69,64 @@ class Exercises(private val generator: DrillGenerator = DrillGenerator(), privat
                 explanation = Explainer.favourite(task.hands, task.board, task.equity),
             )
         }
+        is AdvancedTask.RangeTask -> Question.BuildRange(
+            prompt = "Отметь в таблице: ${task.title.replaceFirstChar { it.lowercase() }}",
+            target = task.target,
+            explanation = Explainer.range(task.title, task.target, task.note),
+        )
+        is AdvancedTask.PushFoldTask -> Question.PushOrFold(
+            prompt = "Турнир. Все сбросили до тебя, ты на малом блайнде. Олл-ин или пас?",
+            hole = task.hole,
+            stackBb = task.stackBb,
+            callPercent = task.callPercent,
+            callChance = task.result.callChance,
+            equityWhenCalled = task.result.equityWhenCalled,
+            evPush = task.result.evPush,
+            explanation = Explainer.pushFold(task.stackBb, task.callPercent, task.result),
+        )
+        is AdvancedTask.CombosTask -> Question.Choice(
+            prompt = task.prompt,
+            options = task.options.map { "$it" },
+            correct = task.options.indexOf(task.answer),
+            explanation = task.explanation,
+            concept = Concept.COMBINATORICS,
+            visual = when {
+                task.hole.isNotEmpty() || task.board.isNotEmpty() -> Visual.Hand(task.hole, task.board)
+                task.example.isNotEmpty() -> Visual.Cards(task.example, caption = task.exampleCaption)
+                else -> null
+            },
+            columns = 4,
+        )
+        is AdvancedTask.SizingTask -> {
+            val sizes = Sizing.entries
+            Question.Choice(
+                prompt = "Ты повышал до флопа, соперник уравнял. ${task.street.ruName.replaceFirstChar { it.uppercase() }}, " +
+                    "в банке ${task.pot}, соперник чекнул тебе. Что делаешь?",
+                options = sizes.map { sizingLabel(it, task.pot) },
+                correct = sizes.indexOf(task.answer),
+                explanation = "У тебя ${task.read.label}" +
+                    (if (task.read.outs > 0) " — ${task.read.outs} ${plural(task.read.outs, "аут", "аута", "аутов")}" else "") +
+                    ".\n" + SizingRules.reason(task.street, task.read, task.wet),
+                concept = Concept.BET_SIZING,
+                visual = Visual.Hand(task.hole, task.board),
+                columns = 2,
+            )
+        }
+        is AdvancedTask.BluffMathTask -> Question.Choice(
+            prompt = task.prompt,
+            options = task.options,
+            correct = task.options.indexOf(task.answer),
+            explanation = task.explanation,
+            concept = Concept.BLUFF_MATH,
+            columns = 2,
+        )
+    }
+
+    private fun sizingLabel(s: Sizing, pot: Int): String = when (s) {
+        Sizing.CHECK -> "Чек"
+        Sizing.THIRD -> "Треть банка · ${pot / 3}"
+        Sizing.TWO_THIRDS -> "Две трети · ${pot * 2 / 3}"
+        Sizing.POT -> "Весь банк · $pot"
     }
 
     /** Questions to re-train [concept]: lesson questions plus fresh generated ones. */

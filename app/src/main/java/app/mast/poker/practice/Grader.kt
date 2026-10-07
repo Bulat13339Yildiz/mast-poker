@@ -4,6 +4,7 @@ import app.mast.poker.content.Question
 import app.mast.poker.core.poker.Card
 import app.mast.poker.core.poker.HandCategory
 import app.mast.poker.core.poker.HandEvaluator
+import app.mast.poker.core.poker.StartingHand
 import app.mast.poker.progress.AnswerExtras
 
 sealed interface Answer {
@@ -11,8 +12,10 @@ sealed interface Answer {
     data class Pick(val index: Int) : Answer
     data class Cards(val selected: Set<Card>) : Answer
     data class Order(val order: List<HandCategory>) : Answer
-    /** Call / open-raise = true, fold = false. */
+    /** Call / open-raise / shove = true, fold = false. */
     data class Decision(val yes: Boolean) : Answer
+    /** Hands marked on the 13×13 grid. */
+    data class Hands(val selected: Set<StartingHand>) : Answer
 }
 
 object Grader {
@@ -27,6 +30,8 @@ object Grader {
         is Question.CallOrFold -> a is Answer.Decision && a.yes == q.shouldCall
         is Question.OpenOrFold -> a is Answer.Decision && a.yes == q.shouldOpen
         is Question.Favourite -> a is Answer.Pick && a.index == q.answer
+        is Question.BuildRange -> a is Answer.Hands && q.isCorrect(a.selected)
+        is Question.PushOrFold -> a is Answer.Decision && a.yes == q.shouldPush
     }
 
     /** The answer that would be correct — used to reveal it after a mistake. */
@@ -40,6 +45,8 @@ object Grader {
         is Question.CallOrFold -> Answer.Decision(q.shouldCall)
         is Question.OpenOrFold -> Answer.Decision(q.shouldOpen)
         is Question.Favourite -> Answer.Pick(q.answer)
+        is Question.BuildRange -> Answer.Hands(q.target)
+        is Question.PushOrFold -> Answer.Decision(q.shouldPush)
     }
 
     /** Rare hands recognised correctly count towards hidden achievements. */

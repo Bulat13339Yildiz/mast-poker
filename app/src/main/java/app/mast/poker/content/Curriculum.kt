@@ -3,9 +3,15 @@ package app.mast.poker.content
 import app.mast.poker.content.chapters.basicsChapter
 import app.mast.poker.content.chapters.flowChapter
 import app.mast.poker.content.chapters.handsChapter
+import app.mast.poker.content.chapters.math2Chapter
 import app.mast.poker.content.chapters.mathChapter
+import app.mast.poker.content.chapters.opponentsChapter
+import app.mast.poker.content.chapters.preflop2Chapter
 import app.mast.poker.content.chapters.preflopChapter
+import app.mast.poker.content.chapters.rangesChapter
+import app.mast.poker.content.chapters.sizingChapter
 import app.mast.poker.content.chapters.strategyChapter
+import app.mast.poker.content.chapters.tournamentsChapter
 
 object Curriculum {
     val chapters: List<Chapter> = listOf(
@@ -15,6 +21,12 @@ object Curriculum {
         preflopChapter,
         mathChapter,
         strategyChapter,
+        rangesChapter,
+        math2Chapter,
+        sizingChapter,
+        preflop2Chapter,
+        tournamentsChapter,
+        opponentsChapter,
     )
 
     val lessons: List<Lesson> = chapters.flatMap { it.lessons }

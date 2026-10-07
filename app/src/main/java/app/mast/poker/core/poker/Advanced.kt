@@ -132,3 +132,25 @@ object Variance {
         return sqrt(-2.0 * kotlin.math.ln(u)) * kotlin.math.cos(2 * Math.PI * v)
     }
 }
+
+/**
+ * Independent Chip Model (Malmuth–Harville): the chance to finish in each place is
+ * proportional to the stack among the players still left. Returns each player's share
+ * of [prizes] (same units as the prizes).
+ */
+object Icm {
+    fun equities(stacks: List<Double>, prizes: List<Double>): List<Double> {
+        val result = DoubleArray(stacks.size)
+        fun place(left: List<Int>, rank: Int, chance: Double) {
+            if (rank >= prizes.size || left.isEmpty()) return
+            val total = left.sumOf { stacks[it] }
+            for (i in left) {
+                val p = chance * stacks[i] / total
+                result[i] += p * prizes[rank]
+                place(left - i, rank + 1, p)
+            }
+        }
+        place(stacks.indices.toList(), 0, 1.0)
+        return result.toList()
+    }
+}
