@@ -49,6 +49,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.mast.poker.content.DrillType
+import app.mast.poker.practice.Exercises
 import app.mast.poker.practice.sim.HandSimulator
 import app.mast.poker.practice.sim.Quality
 import app.mast.poker.practice.sim.SimView
@@ -258,10 +259,11 @@ private fun HandOver(view: SimView, isLast: Boolean, onNext: () -> Unit) {
     val r = view.result ?: return
     val tone = if (r.heroNet > 0) MastColors.Correct else if (r.heroNet < 0) MastColors.Wrong else MastColors.GoldLight
     GlassPanel(Modifier.fillMaxWidth(), tint = MastColors.FeltDark.copy(alpha = 0.97f), gilded = true) {
+        val chips = Exercises.plural(kotlin.math.abs(r.heroNet), "фишка", "фишки", "фишек")
         Text(
             when {
-                r.heroNet > 0 -> "+${r.heroNet} фишек"
-                r.heroNet < 0 -> "${r.heroNet} фишек"
+                r.heroNet > 0 -> "+${r.heroNet} $chips"
+                r.heroNet < 0 -> "−${-r.heroNet} $chips"
                 else -> "При своих"
             },
             fontFamily = Playfair, fontWeight = FontWeight.Bold, fontSize = 28.sp, color = tone,
