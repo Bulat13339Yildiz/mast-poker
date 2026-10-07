@@ -39,6 +39,10 @@ import app.mast.poker.ui.screens.LessonScreen
 import app.mast.poker.ui.screens.MainScreen
 import app.mast.poker.ui.screens.OnboardingScreen
 import app.mast.poker.ui.screens.ReviewScreen
+import app.mast.poker.ui.screens.EquityToolScreen
+import app.mast.poker.ui.screens.ExamScreen
+import app.mast.poker.ui.screens.PuzzleScreen
+import app.mast.poker.ui.screens.VarianceToolScreen
 import app.mast.poker.ui.theme.LocalHapticsEnabled
 import app.mast.poker.ui.theme.LocalReducedMotion
 import app.mast.poker.ui.theme.MastTheme
@@ -52,6 +56,10 @@ import kotlinx.serialization.Serializable
 @Serializable data class DrillRoute(val type: String, val blitz: Boolean)
 @Serializable object ReviewRoute
 @Serializable object AchievementsRoute
+@Serializable data class ExamRoute(val chapterId: String)
+@Serializable object PuzzleRoute
+@Serializable object EquityToolRoute
+@Serializable object VarianceToolRoute
 
 val LocalApp = compositionLocalOf<AppViewModel> { error("AppViewModel not provided") }
 val LocalSharedScope = compositionLocalOf<SharedTransitionScope?> { null }
@@ -65,6 +73,10 @@ class Nav(private val controller: NavHostController) {
     fun drill(type: DrillType, mode: DrillMode) = controller.navigate(DrillRoute(type.name, mode == DrillMode.BLITZ))
     fun review() = controller.navigate(ReviewRoute)
     fun achievements() = controller.navigate(AchievementsRoute)
+    fun exam(chapterId: String) = controller.navigate(ExamRoute(chapterId))
+    fun puzzle() = controller.navigate(PuzzleRoute)
+    fun equityTool() = controller.navigate(EquityToolRoute)
+    fun varianceTool() = controller.navigate(VarianceToolRoute)
     fun finishOnboarding() = controller.navigate(MainRoute) { popUpTo(OnboardingRoute) { inclusive = true } }
 }
 
@@ -124,6 +136,10 @@ private fun AppNavHost(progress: UserProgress) {
                 }
                 composable<ReviewRoute> { Scoped(this) { ReviewScreen(nav) } }
                 composable<AchievementsRoute> { Scoped(this) { AchievementsScreen(nav) } }
+                composable<ExamRoute> { Scoped(this) { ExamScreen(it.toRoute<ExamRoute>().chapterId, nav) } }
+                composable<PuzzleRoute> { Scoped(this) { PuzzleScreen(nav) } }
+                composable<EquityToolRoute> { Scoped(this) { EquityToolScreen(nav) } }
+                composable<VarianceToolRoute> { Scoped(this) { VarianceToolScreen(nav) } }
             }
         }
     }

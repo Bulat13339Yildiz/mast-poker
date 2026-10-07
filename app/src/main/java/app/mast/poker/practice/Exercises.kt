@@ -13,7 +13,12 @@ class Exercises(private val generator: DrillGenerator = DrillGenerator(), privat
 
     fun next(type: DrillType): Question = toQuestion(generator.next(type))
 
-    fun next(type: DrillType, level: Int): Question = toQuestion(generator.next(type, level))
+    fun next(type: DrillType, level: Int): Question = toQuestion(generator.next(type, level)).also { levels[it] = level }
+
+    /** Levels of generated questions, so an answer can be rated against the right difficulty. */
+    private val levels: MutableMap<Question, Int> = java.util.Collections.synchronizedMap(java.util.IdentityHashMap())
+
+    fun levelOf(q: Question): Int = levels[q] ?: 1
 
     fun toQuestion(task: DrillTask): Question = when (task) {
         is DrillTask.NameHand -> Question.NameHand(

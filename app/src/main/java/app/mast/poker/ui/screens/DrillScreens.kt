@@ -18,11 +18,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.mast.poker.content.DrillType
 import app.mast.poker.practice.Exercises
 import app.mast.poker.progress.DrillMode
+import app.mast.poker.progress.Rating
 import app.mast.poker.ui.LocalApp
 import app.mast.poker.ui.Nav
 import app.mast.poker.ui.components.PrimaryButton
 import app.mast.poker.ui.theme.MastColors
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.random.Random
 
 private const val PRACTICE_ROUND = 10
 private const val BLITZ_SECONDS = 60
@@ -36,6 +38,7 @@ fun DrillScreen(type: DrillType, mode: DrillMode, nav: Nav) {
     val app = LocalApp.current
     val progress by app.progress.collectAsStateWithLifecycle()
     val exercises = remember { Exercises() }
+    val random = remember { Random(System.nanoTime()) }
     val bestBefore = remember { progress?.stats?.blitzBest?.get(type) ?: 0 }
     val blitz = mode == DrillMode.BLITZ
 
@@ -43,7 +46,9 @@ fun DrillScreen(type: DrillType, mode: DrillMode, nav: Nav) {
         title = type.title,
         total = if (blitz) null else PRACTICE_ROUND,
         timeLimitSec = if (blitz) BLITZ_SECONDS else null,
-        nextQuestion = { exercises.next(type) },
+        // The level follows the player's rating in this drill's concept.
+        nextQuestion = { exercises.next(type, Rating.level(app.progress.value?.rating(type.concept) ?: Rating.START, random)) },
+        difficultyOf = { q -> Rating.difficulty(exercises.levelOf(q)) },
         onFinish = { results ->
             val correct = results.count { it.second }
             val reward = app.finishDrill(type, mode, correct)

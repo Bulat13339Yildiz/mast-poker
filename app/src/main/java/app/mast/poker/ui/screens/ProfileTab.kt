@@ -1,5 +1,6 @@
 package app.mast.poker.ui.screens
 
+import app.mast.poker.progress.Rating
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -211,14 +212,22 @@ private fun XpChart(p: UserProgress, today: Long) {
 private fun ConceptAccuracy(p: UserProgress) {
     val rows = p.stats.perConcept.filter { it.value.total > 0 }.entries.sortedBy { it.value.accuracy }
     GlassPanel(Modifier.fillMaxWidth()) {
-        Text("Точность по темам", style = MaterialTheme.typography.titleMedium, color = MastColors.TextPrimary)
+        Text("Навык по темам", style = MaterialTheme.typography.titleMedium, color = MastColors.TextPrimary)
+        Text(
+            "Рейтинг растёт за верные ответы — сильнее за трудные. С ним усложняются задания тренажёров.",
+            style = MaterialTheme.typography.bodySmall, color = MastColors.TextMuted,
+        )
         Spacer(Modifier.height(10.dp))
         if (rows.isEmpty()) {
             Text("Здесь появится статистика после первых ответов.", style = MaterialTheme.typography.bodySmall, color = MastColors.TextMuted)
         }
         rows.forEach { (concept, stat) ->
             Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(concept.ruName, style = MaterialTheme.typography.bodyMedium, color = MastColors.TextSecondary, modifier = Modifier.weight(1f))
+                Column(Modifier.weight(1f)) {
+                    Text(concept.ruName, style = MaterialTheme.typography.bodyMedium, color = MastColors.TextSecondary)
+                    val rating = p.rating(concept)
+                    Text("$rating · ${Rating.title(rating)}", style = MaterialTheme.typography.labelSmall, color = MastColors.GoldLight)
+                }
                 Box(Modifier.width(110.dp)) { XpBar(stat.accuracy, height = 6.dp) }
                 Text(
                     "${(stat.accuracy * 100).roundToInt()}%",

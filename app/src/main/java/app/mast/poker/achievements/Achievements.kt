@@ -83,6 +83,29 @@ object Achievements {
         Achievement("level_5", "Завсегдатай", "Достигни 5 уровня", Tier.SILVER) { p, _ -> p.level >= 5 },
         Achievement("level_10", "Акула", "Достигни 10 уровня", Tier.GOLD) { p, _ -> p.level >= 10 },
 
+        // Второй уровень
+        Achievement("chapter_ranges", "Мыслю диапазонами", "Пройди главу «Диапазоны»", Tier.SILVER, condition = chapterDone("ranges")),
+        Achievement("chapter_math2", "Считаю EV", "Пройди главу «Математика 2»", Tier.GOLD, condition = chapterDone("math2")),
+        Achievement("chapter_sizing", "Точный размер", "Пройди главу «Размер ставок»", Tier.SILVER, condition = chapterDone("sizing")),
+        Achievement("chapter_preflop2", "Три бета", "Пройди главу «Префлоп 2»", Tier.SILVER, condition = chapterDone("preflop2")),
+        Achievement("chapter_tournaments", "Турнирный боец", "Пройди главу «Турниры»", Tier.GOLD, condition = chapterDone("tournaments")),
+        Achievement("chapter_opponents", "Читаю людей", "Пройди главу «Соперники»", Tier.GOLD, condition = chapterDone("opponents")),
+
+        // Экзамены
+        counted("exam_first", "Печать мастера", "Сдай экзамен любой главы", Tier.BRONZE, 1) { p -> p.exams.values.count { it.passed } },
+        counted("exam_perfect", "Отличник", "Сдай экзамен без единой ошибки", Tier.SILVER, 1) { it.stats.perfectExams },
+        counted("exam_all", "Золотая коллекция", "Сдай экзамены всех глав", Tier.GOLD, Curriculum.chapters.size) { p -> p.exams.values.count { it.passed } },
+
+        // Задача дня и задания
+        counted("puzzle_first", "Задача дня", "Реши первую задачу дня", Tier.BRONZE, 1) { it.puzzle.solved },
+        counted("puzzle_7", "Неделя задач", "Решай задачу дня 7 дней подряд", Tier.SILVER, 7) { it.puzzle.bestStreak },
+        counted("quest_first", "Задание выполнено", "Выполни задание недели", Tier.BRONZE, 1) { it.quests.totalDone },
+        counted("quests_15", "Охотник за заданиями", "Выполни 15 заданий недели", Tier.GOLD, 15) { it.quests.totalDone },
+
+        // Рейтинг
+        Achievement("rating_1250", "Сильный игрок", "Подними рейтинг любой темы до 1250", Tier.SILVER) { p, _ -> (p.ratings.values.maxOrNull() ?: 0) >= 1250 },
+        Achievement("rating_1450", "Мастер темы", "Подними рейтинг любой темы до 1450", Tier.GOLD) { p, _ -> (p.ratings.values.maxOrNull() ?: 0) >= 1450 },
+
         // Скрытые
         Achievement("night_owl", "Ночная сова", "Позанимайся после полуночи", Tier.BRONZE, hidden = true) { _, c -> c.hour in 0..3 },
         Achievement("early_bird", "Ранняя пташка", "Позанимайся до 7 утра", Tier.BRONZE, hidden = true) { _, c -> c.hour in 4..6 },

@@ -94,6 +94,7 @@ fun ChapterScreen(chapterId: String, nav: Nav) {
                     if (state != NodeState.Locked) nav.lesson(lesson.id)
                 }
             }
+            item { ExamPanel(chapter, p) { nav.exam(chapter.id) } }
             item { Spacer(Modifier.navigationBarsPadding()) }
         }
     }

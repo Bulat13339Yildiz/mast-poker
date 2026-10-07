@@ -45,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.mast.poker.content.Question
+import app.mast.poker.progress.Rating
 import app.mast.poker.progress.Reward
 import app.mast.poker.ui.LocalApp
 import app.mast.poker.ui.components.MastIcons
@@ -65,7 +66,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** How a finished session is summarised on the result screen. */
-data class SessionSummary(val title: String, val subtitle: String, val scoreLabel: String? = null)
+data class SessionSummary(val title: String, val subtitle: String, val scoreLabel: String? = null, val outOf: Int? = null)
 
 /**
  * Runs a stream of questions. With [timeLimitSec] it is a blitz: answers submit
@@ -79,10 +80,12 @@ fun QuizSession(
     nextQuestion: () -> Question,
     onFinish: suspend (results: List<Pair<Question, Boolean>>) -> Pair<Reward, SessionSummary>,
     onExit: () -> Unit,
+    difficultyOf: (Question) -> Int = { Rating.difficulty(1) },
+    restartable: Boolean = true,
 ) {
     var round by remember { mutableIntStateOf(0) }
     key(round) {
-        SessionRound(title, total, timeLimitSec, nextQuestion, onFinish, onExit, onRestart = { round++ })
+        SessionRound(title, total, timeLimitSec, nextQuestion, onFinish, onExit, difficultyOf, onRestart = if (restartable) ({ round++ }) else null)
     }
 }
 
@@ -94,7 +97,8 @@ private fun SessionRound(
     nextQuestion: () -> Question,
     onFinish: suspend (List<Pair<Question, Boolean>>) -> Pair<Reward, SessionSummary>,
     onExit: () -> Unit,
-    onRestart: () -> Unit,
+    difficultyOf: (Question) -> Int,
+    onRestart: (() -> Unit)?,
 ) {
     val app = LocalApp.current
     val scope = rememberCoroutineScope()
@@ -145,7 +149,7 @@ private fun SessionRound(
             shake++
             haptics.error()
         }
-        scope.launch { app.answer(state.question, f.correct) }
+        scope.launch { app.answer(state.question, f.correct, difficultyOf(state.question)) }
         if (blitz) {
             scope.launch {
                 delay(if (f.correct) 350 else 1200)
@@ -175,10 +179,10 @@ private fun SessionRound(
             title = summary.title,
             subtitle = summary.subtitle,
             correct = results.count { it.second },
-            total = results.size,
+            total = summary.outOf ?: results.size,
             reward = reward,
             onContinue = onExit,
-            secondary = "Ещё раз" to onRestart,
+            secondary = onRestart?.let { "Ещё раз" to it },
             scoreLabel = summary.scoreLabel,
         )
         return

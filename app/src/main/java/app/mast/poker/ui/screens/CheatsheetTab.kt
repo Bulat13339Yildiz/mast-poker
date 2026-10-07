@@ -41,7 +41,17 @@ import app.mast.poker.content.Reference
 import app.mast.poker.core.poker.PotOdds
 import app.mast.poker.core.poker.PreflopChart
 import app.mast.poker.core.poker.SeatGroup
+import app.mast.poker.ui.Nav
+import app.mast.poker.ui.components.FannedCards
 import app.mast.poker.ui.components.GlassPanel
+import app.mast.poker.ui.components.PressablePanel
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.unit.Dp
 import app.mast.poker.ui.components.GoldLabel
 import app.mast.poker.ui.components.MiniCard
 import app.mast.poker.ui.theme.MastColors
@@ -49,10 +59,10 @@ import app.mast.poker.ui.theme.Motion
 import app.mast.poker.ui.visuals.StartingHandsChart
 import kotlin.math.roundToInt
 
-private enum class Sheet(val title: String) { HANDS("Комбинации"), TERMS("Термины"), PREFLOP("Префлоп"), MATH("Математика") }
+private enum class Sheet(val title: String) { HANDS("Комбинации"), TOOLS("Инструменты"), TERMS("Термины"), PREFLOP("Префлоп"), MATH("Математика") }
 
 @Composable
-fun CheatsheetTab() {
+fun CheatsheetTab(nav: Nav) {
     var sheet by rememberSaveable { mutableStateOf(Sheet.HANDS) }
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.statusBarsPadding().padding(start = 20.dp, end = 20.dp, top = 16.dp)) {
@@ -80,6 +90,7 @@ fun CheatsheetTab() {
         AnimatedContent(sheet, transitionSpec = { fadeIn(tween(Motion.Medium)).togetherWith(fadeOut(tween(Motion.Short))) }, label = "sheet") { s ->
             when (s) {
                 Sheet.HANDS -> HandsSheet()
+                Sheet.TOOLS -> ToolsSheet(nav)
                 Sheet.TERMS -> TermsSheet()
                 Sheet.PREFLOP -> PreflopSheet()
                 Sheet.MATH -> MathSheet()
@@ -117,6 +128,60 @@ private fun HandsSheet() {
                 style = MaterialTheme.typography.bodySmall, color = MastColors.TextMuted,
             )
         }
+    }
+}
+
+@Composable
+private fun ToolsSheet(nav: Nav) {
+    LazyColumn(contentPadding = sheetPadding, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item {
+            ToolTile(
+                "Калькулятор шансов",
+                "Выбери карты — узнай, как часто рука выигрывает против другой руки, случайной или целого диапазона.",
+                { FannedCards("As Kd", 64.dp) },
+                nav::equityTool,
+            )
+        }
+        item {
+            ToolTile(
+                "Симулятор дисперсии",
+                "Как сильно может везти и не везти на дистанции — даже хорошему игроку.",
+                { VarianceIcon(64.dp) },
+                nav::varianceTool,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ToolTile(title: String, text: String, art: @Composable () -> Unit, onClick: () -> Unit) {
+    PressablePanel(onClick, Modifier.fillMaxWidth(), gilded = true, padding = PaddingValues(16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(64.dp), contentAlignment = Alignment.Center) { art() }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium, color = MastColors.TextPrimary)
+                Text(text, style = MaterialTheme.typography.bodySmall, color = MastColors.TextSecondary)
+            }
+        }
+    }
+}
+
+/** A tiny chart: several lines fanning out from one point. */
+@Composable
+private fun VarianceIcon(size: Dp) {
+    Canvas(Modifier.size(size)) {
+        val w = this.size.width
+        val h = this.size.height
+        val ends = listOf(0.15f, 0.3f, 0.45f, 0.62f, 0.8f)
+        ends.forEachIndexed { i, end ->
+            val path = Path().apply {
+                moveTo(0f, h * 0.55f)
+                cubicTo(w * 0.35f, h * (0.55f - 0.08f * (i - 2)), w * 0.65f, h * (end + 0.05f * ((i % 2) * 2 - 1)), w, h * end)
+            }
+            drawPath(path, (if (end < 0.55f) MastColors.Correct else MastColors.Wrong).copy(alpha = 0.8f), style = Stroke(2.dp.toPx()))
+        }
+        drawLine(MastColors.GoldLight, Offset(0f, h * 0.55f), Offset(w, h * 0.35f), 3.dp.toPx())
     }
 }
 

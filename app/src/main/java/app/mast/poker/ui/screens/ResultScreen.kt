@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.mast.poker.achievements.Tier
+import app.mast.poker.progress.Quests
 import app.mast.poker.core.poker.Suit
 import app.mast.poker.progress.Levels
 import app.mast.poker.progress.Reward
@@ -142,6 +143,13 @@ fun ResultScreen(
                         style = MaterialTheme.typography.titleMedium, color = MastColors.GoldLight,
                         modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
                     )
+                }
+            }
+            reward.quests.forEach { q ->
+                Spacer(Modifier.height(12.dp))
+                GlassPanel(Modifier.fillMaxWidth(), gilded = true) {
+                    Text("Задание недели выполнено", style = MaterialTheme.typography.labelLarge, color = MastColors.Gold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                    Text("${q.title} · +${Quests.XP} XP", style = MaterialTheme.typography.titleMedium, color = MastColors.GoldLight, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                 }
             }
             if (reward.achievements.isNotEmpty()) {

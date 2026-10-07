@@ -14,6 +14,8 @@ import app.mast.poker.content.Question
 import app.mast.poker.practice.Grader
 import app.mast.poker.progress.DrillMode
 import app.mast.poker.progress.ProgressRepository
+import app.mast.poker.progress.Quest
+import app.mast.poker.progress.Rating
 import app.mast.poker.progress.Reward
 import app.mast.poker.progress.Settings
 import app.mast.poker.progress.UserProgress
@@ -37,16 +39,28 @@ class AppViewModel(private val repo: ProgressRepository) : ViewModel() {
     /** Achievements earned mid-session (e.g. answer streaks) — shown when the session ends. */
     private val deferred = mutableListOf<Achievement>()
 
+    /** Weekly quests finished by single answers, and the XP they paid — reported with the session. */
+    private val deferredQuests = mutableListOf<Quest>()
+    private var deferredXp = 0
+
     fun today(): Long = repo.today()
 
     fun completeOnboarding(goalXp: Int) {
         viewModelScope.launch { repo.completeOnboarding(goalXp) }
     }
 
-    suspend fun answer(q: Question, correct: Boolean) {
-        val r = repo.answer(q.concept, correct, Grader.extras(q, correct))
+    suspend fun answer(q: Question, correct: Boolean, difficulty: Int = Rating.difficulty(1)) {
+        val r = repo.answer(q.concept, correct, Grader.extras(q, correct), difficulty)
         deferred += r.achievements
+        deferredQuests += r.quests
+        deferredXp += r.xp
     }
+
+    suspend fun finishExam(chapterId: String, correct: Int, total: Int): Reward =
+        celebrate(repo.finishExam(chapterId, correct, total))
+
+    suspend fun solvePuzzle(correct: Boolean): Reward =
+        celebrate(repo.solvePuzzle(correct))
 
     suspend fun completeLesson(lessonId: String, correct: Int, total: Int): Reward =
         celebrate(repo.completeLesson(lessonId, correct, total))
@@ -76,9 +90,13 @@ class AppViewModel(private val repo: ProgressRepository) : ViewModel() {
     private fun celebrate(r: Reward): Reward {
         val all = (deferred + r.achievements).distinctBy { it.id }
         deferred.clear()
+        val quests = (deferredQuests + r.quests).distinctBy { it.id }
+        val extraXp = deferredXp
+        deferredQuests.clear()
+        deferredXp = 0
         if (r.leveledUp) celebrations += Celebration.LevelUp(r.levelAfter)
         celebrations += all.map { Celebration.NewAchievement(it) }
-        return r.copy(achievements = all)
+        return r.copy(achievements = all, quests = quests, xp = r.xp + extraXp)
     }
 
     companion object {

@@ -85,7 +85,7 @@ fun MainScreen(nav: Nav) {
             when (t) {
                 Tab.LEARN -> LearnTab(nav, onOpenPractice = { tab = Tab.PRACTICE })
                 Tab.PRACTICE -> PracticeTab(nav, onPickDrill = { drillSheet = it })
-                Tab.CHEATSHEET -> CheatsheetTab()
+                Tab.CHEATSHEET -> CheatsheetTab(nav)
                 Tab.PROFILE -> ProfileTab(nav)
             }
         }

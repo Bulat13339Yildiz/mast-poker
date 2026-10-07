@@ -1,5 +1,7 @@
 package app.mast.poker.ui.screens
 
+import app.mast.poker.achievements.Tier
+import app.mast.poker.ui.components.Medal
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -74,12 +76,14 @@ fun LearnTab(nav: Nav, onOpenPractice: () -> Unit) {
         }
         val due = p.dueMistakes(today)
         if (due.isNotEmpty()) item { ReviewCard(due.size) { nav.review() } }
+        item { PuzzleCard(p, today, onOpen = nav::puzzle) }
+        item { QuestsCard(p, today) }
         item { TipCard(p, today, nav) }
         Curriculum.chapters.groupBy { it.level }.forEach { (level, chapters) ->
             item(key = "level-$level") {
                 GoldLabel(if (level == 1) "Уровень 1 · Основы" else "Уровень 2 · Глубже в игру", Modifier.padding(top = 8.dp))
             }
-            items(chapters, key = { it.id }) { chapter -> ChapterTile(chapter, completed) { nav.chapter(chapter.id) } }
+            items(chapters, key = { it.id }) { chapter -> ChapterTile(chapter, completed, p.exams[chapter.id]?.passed == true) { nav.chapter(chapter.id) } }
         }
     }
 }
@@ -207,7 +211,7 @@ private fun drillFor(concept: Concept): DrillType? =
     DrillType.entries.firstOrNull { it.concept == concept && it != DrillType.HAND_SIM }
 
 @Composable
-private fun ChapterTile(chapter: Chapter, completed: Set<String>, onClick: () -> Unit) {
+private fun ChapterTile(chapter: Chapter, completed: Set<String>, sealed: Boolean, onClick: () -> Unit) {
     val done = chapter.lessons.count { it.id in completed }
     val unlocked = Curriculum.isUnlocked(chapter.lessons.first().id, completed)
     PressablePanel(
@@ -224,6 +228,10 @@ private fun ChapterTile(chapter: Chapter, completed: Set<String>, onClick: () ->
                     if (!unlocked) {
                         Spacer(Modifier.width(6.dp))
                         Icon(MastIcons.Lock, "Закрыто", tint = MastColors.TextMuted, modifier = Modifier.size(16.dp))
+                    }
+                    if (sealed) {
+                        Spacer(Modifier.weight(1f))
+                        Medal(Tier.GOLD, chapter.suit, 30.dp)
                     }
                 }
                 Spacer(Modifier.height(6.dp))

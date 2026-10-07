@@ -56,8 +56,18 @@ class ProgressRepository(
         store.updateData { ProgressReducer.completeOnboarding(it, dailyGoalXp) }
     }
 
-    suspend fun answer(concept: Concept, correct: Boolean, extras: AnswerExtras = AnswerExtras()): Reward =
-        transform { p, now -> ProgressReducer.answer(p, concept, correct, extras, now) }
+    suspend fun answer(
+        concept: Concept,
+        correct: Boolean,
+        extras: AnswerExtras = AnswerExtras(),
+        difficulty: Int = Rating.difficulty(1),
+    ): Reward = transform { p, now -> ProgressReducer.answer(p, concept, correct, extras, now, difficulty) }
+
+    suspend fun finishExam(chapterId: String, correct: Int, total: Int): Reward =
+        transform { p, now -> ProgressReducer.finishExam(p, chapterId, correct, total, now) }
+
+    suspend fun solvePuzzle(correct: Boolean): Reward =
+        transform { p, now -> ProgressReducer.solvePuzzle(p, correct, now) }
 
     suspend fun completeLesson(lessonId: String, correct: Int, total: Int): Reward =
         transform { p, now -> ProgressReducer.completeLesson(p, lessonId, correct, total, now) }
