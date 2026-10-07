@@ -2,6 +2,7 @@ package app.mast.poker.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -10,12 +11,16 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -51,9 +56,12 @@ import androidx.compose.ui.unit.sp
 import app.mast.poker.content.DrillType
 import app.mast.poker.practice.Exercises
 import app.mast.poker.practice.sim.HandSimulator
+import app.mast.poker.practice.sim.HistoryEntry
 import app.mast.poker.practice.sim.Quality
 import app.mast.poker.practice.sim.SimView
 import app.mast.poker.practice.sim.Verdict
+import app.mast.poker.practice.sim.VillainStyle
+import app.mast.poker.practice.sim.Who
 import app.mast.poker.progress.DrillMode
 import app.mast.poker.progress.Reward
 import app.mast.poker.ui.LocalApp
@@ -62,12 +70,14 @@ import app.mast.poker.ui.components.ButtonTone
 import app.mast.poker.ui.components.DealtCard
 import app.mast.poker.ui.components.GlassPanel
 import app.mast.poker.ui.components.MastIcons
+import app.mast.poker.ui.components.MiniCard
 import app.mast.poker.ui.components.OptionState
 import app.mast.poker.ui.components.OptionTile
 import app.mast.poker.ui.components.PrimaryButton
 import app.mast.poker.ui.components.RedChip
 import app.mast.poker.ui.components.RichText
 import app.mast.poker.ui.components.RollingNumber
+import app.mast.poker.ui.components.SecondaryButton
 import app.mast.poker.ui.components.drawChip
 import app.mast.poker.ui.theme.MastColors
 import app.mast.poker.ui.theme.Motion
@@ -96,6 +106,7 @@ private fun HandSimSession(nav: Nav, onRestart: () -> Unit) {
     val allVerdicts = remember { mutableStateListOf<Verdict>() }
     var reward by remember { mutableStateOf<Reward?>(null) }
     var confirmExit by remember { mutableStateOf(false) }
+    var reviewing by remember(handNo) { mutableStateOf(false) }
     val good = allVerdicts.count { it.quality != Quality.MISTAKE }
 
     fun finishSession() {
@@ -117,7 +128,7 @@ private fun HandSimSession(nav: Nav, onRestart: () -> Unit) {
         return
     }
 
-    BackHandler { confirmExit = true }
+    BackHandler { if (reviewing) reviewing = false else confirmExit = true }
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
@@ -132,7 +143,15 @@ private fun HandSimSession(nav: Nav, onRestart: () -> Unit) {
             }
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 280.dp)) {
                 Table(view, handNo)
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    view.style.tip,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MastColors.TextMuted,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                )
+                Spacer(Modifier.height(10.dp))
                 AnimatedContent(view.lastLog, transitionSpec = { fadeIn(tween(Motion.Medium)).togetherWith(fadeOut(tween(Motion.Short))) }, label = "log") { line ->
                     RichText(line, style = MaterialTheme.typography.bodyMedium, color = MastColors.TextSecondary, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                 }
@@ -149,10 +168,10 @@ private fun HandSimSession(nav: Nav, onRestart: () -> Unit) {
             ) { (v, r, options) ->
                 when {
                     v != null -> VerdictPanel(v) { lastVerdict = null }
-                    r != null -> HandOver(view, isLast = handNo >= HANDS_PER_SESSION) {
+                    r != null -> HandOver(view, isLast = handNo >= HANDS_PER_SESSION, onReview = { reviewing = true }) {
                         if (handNo >= HANDS_PER_SESSION) finishSession() else handNo++
                     }
-                    options.isNotEmpty() -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    options.isNotEmpty() -> Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         options.forEach { o ->
                             OptionTile(o.label, OptionState.Idle, {
                                 val verdictNow = sim.act(o.act)
@@ -160,12 +179,16 @@ private fun HandSimSession(nav: Nav, onRestart: () -> Unit) {
                                 lastVerdict = verdictNow
                                 view = sim.view()
                                 if (verdictNow.quality == Quality.MISTAKE) haptics.error() else haptics.success()
-                            }, Modifier.weight(1f))
+                            }, Modifier.weight(1f).fillMaxHeight(), centered = true)
                         }
                     }
                     else -> Spacer(Modifier.height(1.dp))
                 }
             }
+        }
+
+        AnimatedVisibility(reviewing, enter = fadeIn() + slideInVertically(Motion.cardSpring()) { it / 3 }, exit = fadeOut()) {
+            HistorySheet(view, onClose = { reviewing = false })
         }
 
         MastDialog(
@@ -196,7 +219,11 @@ private fun Table(view: SimView, handNo: Int) {
     ) {
         val w = cardWidthFor(5, maxWidth, cap = 56.dp)
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Соперник · BB", style = MaterialTheme.typography.labelMedium, color = MastColors.TextSecondary)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Соперник · ${view.villainSeat.short}", style = MaterialTheme.typography.labelMedium, color = MastColors.TextSecondary)
+                Spacer(Modifier.width(8.dp))
+                StyleChip(view.style)
+            }
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 view.villain.forEachIndexed { i, c -> DealtCard(c, w * 0.9f, i, dealKey = "v$handNo", faceUp = showdown) }
@@ -255,7 +282,7 @@ private fun VerdictPanel(v: Verdict, onNext: () -> Unit) {
 }
 
 @Composable
-private fun HandOver(view: SimView, isLast: Boolean, onNext: () -> Unit) {
+private fun HandOver(view: SimView, isLast: Boolean, onReview: () -> Unit, onNext: () -> Unit) {
     val r = view.result ?: return
     val tone = if (r.heroNet > 0) MastColors.Correct else if (r.heroNet < 0) MastColors.Wrong else MastColors.GoldLight
     GlassPanel(Modifier.fillMaxWidth(), tint = MastColors.FeltDark.copy(alpha = 0.97f), gilded = true) {
@@ -276,6 +303,125 @@ private fun HandOver(view: SimView, isLast: Boolean, onNext: () -> Unit) {
             style = MaterialTheme.typography.bodySmall, color = MastColors.TextMuted,
         )
         Spacer(Modifier.height(12.dp))
-        PrimaryButton(if (isLast) "Итоги" else "Следующая раздача", onNext, Modifier.fillMaxWidth())
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            SecondaryButton("Разбор", onReview, Modifier.weight(1f))
+            PrimaryButton(if (isLast) "Итоги" else "Дальше", onNext, Modifier.weight(1.4f))
+        }
+    }
+}
+
+@Composable
+private fun StyleChip(style: VillainStyle) {
+    Text(
+        style.ruName,
+        style = MaterialTheme.typography.labelSmall,
+        color = MastColors.GoldLight,
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(MastColors.FeltDeep.copy(alpha = 0.6f))
+            .border(1.dp, MastColors.Gold.copy(alpha = 0.6f), RoundedCornerShape(50))
+            .padding(horizontal = 10.dp, vertical = 3.dp),
+    )
+}
+
+/** The whole hand street by street, with the coach's verdict on every decision. */
+@Composable
+private fun HistorySheet(view: SimView, onClose: () -> Unit) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(MastColors.Scrim)
+            .clickable(remember { MutableInteractionSource() }, indication = null, onClick = onClose),
+    ) {
+        GlassPanel(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .fillMaxHeight(0.9f)
+                .navigationBarsPadding()
+                .padding(10.dp)
+                .clickable(remember { MutableInteractionSource() }, indication = null) {},
+            tint = MastColors.FeltDark.copy(alpha = 0.98f),
+            gilded = true,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Разбор раздачи", style = MaterialTheme.typography.headlineSmall, color = MastColors.TextPrimary, modifier = Modifier.weight(1f))
+                RoundIconButton(MastIcons.Close, "Закрыть", onClose, size = 40.dp)
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Твои карты · ${view.position.short}", style = MaterialTheme.typography.labelSmall, color = MastColors.TextMuted)
+                    Spacer(Modifier.height(4.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) { view.hero.forEach { MiniCard(it, 30.dp) } }
+                }
+                Column(Modifier.weight(1f)) {
+                    Text("Соперник · ${view.style.ruName.lowercase()}", style = MaterialTheme.typography.labelSmall, color = MastColors.TextMuted)
+                    Spacer(Modifier.height(4.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) { view.villain.forEach { MiniCard(it, 30.dp) } }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                view.history.forEach { e ->
+                    when (e) {
+                        is HistoryEntry.Street -> StreetHeader(e)
+                        is HistoryEntry.Line -> HistoryLine(e)
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun StreetHeader(e: HistoryEntry.Street) {
+    Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(e.street.ruName.uppercase(), style = MaterialTheme.typography.labelMedium, color = MastColors.Gold)
+        Spacer(Modifier.width(10.dp))
+        e.cards.forEach {
+            MiniCard(it, 24.dp)
+            Spacer(Modifier.width(3.dp))
+        }
+        Spacer(Modifier.weight(1f))
+        Text("банк ${e.pot}", style = MaterialTheme.typography.labelSmall, color = MastColors.TextMuted)
+    }
+}
+
+@Composable
+private fun HistoryLine(e: HistoryEntry.Line) {
+    val v = e.verdict
+    when (e.who) {
+        Who.TABLE -> Text(e.text, style = MaterialTheme.typography.bodySmall, color = MastColors.TextMuted)
+        Who.VILLAIN -> Text(e.text, style = MaterialTheme.typography.bodyMedium, color = MastColors.TextSecondary)
+        Who.HERO -> {
+            val tone = when (v?.quality) {
+                Quality.BEST -> MastColors.Correct
+                Quality.OK -> MastColors.Gold
+                Quality.MISTAKE -> MastColors.Wrong
+                null -> MastColors.TextPrimary
+            }
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(tone.copy(alpha = 0.08f))
+                    .border(1.dp, tone.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
+                    .padding(12.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(e.text, style = MaterialTheme.typography.titleSmall, color = MastColors.TextPrimary, modifier = Modifier.weight(1f))
+                    if (v != null) Text(v.quality.ruName, style = MaterialTheme.typography.labelMedium, color = tone)
+                }
+                if (v != null) {
+                    if (v.quality != Quality.BEST) {
+                        Text("Лучше: ${v.best.ruName.lowercase()}", style = MaterialTheme.typography.labelMedium, color = MastColors.GoldLight)
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    RichText(v.text, style = MaterialTheme.typography.bodySmall, color = MastColors.TextSecondary)
+                }
+            }
+        }
     }
 }

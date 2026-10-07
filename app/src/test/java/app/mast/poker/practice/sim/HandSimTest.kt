@@ -53,7 +53,10 @@ class HandSimTest {
         assertTrue(Coach.preflopOpen(h("8s 7s"), Position.UTG, Act.CALL).text.contains("лимп"))
         assertEquals(Quality.BEST, Coach.preflopVs3bet(h("Qh Qd"), Act.CALL).quality)
         assertEquals(Quality.BEST, Coach.preflopVs3bet(h("9h 9d"), Act.FOLD).quality)
-        assertEquals(Quality.OK, Coach.preflopVs3bet(h("Ah Ad"), Act.RAISE).quality)
+        assertEquals(Quality.BEST, Coach.preflopVs3bet(h("Ah Ad"), Act.RAISE).quality)
+        assertEquals(Quality.OK, Coach.preflopVs3bet(h("Ah Ad"), Act.CALL).quality)
+        assertEquals(Act.FOLD, Coach.preflopVs3bet(h("Ah Qd"), Act.CALL).best)
+        assertEquals(Act.CALL, Coach.preflopVs3bet(h("Ah Qd"), Act.CALL, VillainStyle.MANIAC).best)
     }
 
     private fun spot(read: HandRead, facing: Facing, pot: Int = 20, toCall: Int = 0, aggressor: Boolean = true, wet: Boolean = false, river: Boolean = false) =
@@ -95,8 +98,7 @@ class HandSimTest {
                 assertTrue(v.text.isNotBlank())
                 steps++
                 assertTrue("too many decisions", steps <= 14)
-                val dead = if (sim.position == Position.SB) 0 else 1
-                assertEquals(sim.pot, sim.heroInvested + sim.villainInvested + dead)
+                assertEquals(sim.pot, sim.heroInvested + sim.villainInvested + sim.deadMoney)
             }
             val r = assertNotNull(sim.result).let { sim.result!! }
             assertTrue(r.text.isNotBlank())

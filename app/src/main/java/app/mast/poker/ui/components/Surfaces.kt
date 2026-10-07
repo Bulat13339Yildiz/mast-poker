@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
@@ -41,12 +42,13 @@ fun GlassPanel(
     gilded: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    // A near-solid tint marks a sheet or dialog: keep it opaque so nothing shows through.
+    val bottom = if (tint.alpha >= 0.95f) lerp(tint, MastColors.FeltDeep, 0.6f).copy(alpha = 1f) else tint.copy(alpha = tint.alpha * 0.4f)
+    val top = if (tint.alpha >= 0.95f) tint.copy(alpha = 1f) else tint
     Column(
         modifier
             .clip(shape)
-            .background(
-                Brush.verticalGradient(listOf(tint, tint.copy(alpha = tint.alpha * 0.4f))),
-            )
+            .background(Brush.verticalGradient(listOf(top, bottom)))
             .then(if (gilded) Modifier.gildedFrame() else Modifier.border(BorderStroke(1.dp, border), shape))
             .padding(padding),
         content = content,
