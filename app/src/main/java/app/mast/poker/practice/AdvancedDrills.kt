@@ -72,11 +72,29 @@ object SizingRules {
     }
 }
 
+/** Where a push/fold spot happens: what the hero has posted and who is still to act. */
+enum class PushSeat(val short: String, val ruWhere: String, val heroBlind: Double, val behind: List<Double>) {
+    SB("SB", "на малом блайнде", 0.5, listOf(1.0)),
+    BTN("BTN", "на баттоне", 0.0, listOf(0.5, 1.0)),
+    CO("CO", "на катоффе", 0.0, listOf(0.0, 0.5, 1.0));
+
+    val playersBehind: Int get() = behind.size
+
+    fun evaluate(hole: List<Card>, stackBb: Double, range: HandRange, samples: Int, random: Random): PushFold.MultiResult =
+        PushFold.evaluateFrom(hole, stackBb, heroBlind, behind, range, samples, random)
+}
+
 /** Tasks for the second-level drills. */
 sealed interface AdvancedTask : DrillTask {
     data class RangeTask(val title: String, val target: Set<StartingHand>, val note: String) : AdvancedTask
 
-    data class PushFoldTask(val hole: List<Card>, val stackBb: Double, val callPercent: Int, val result: PushFold.Result) : AdvancedTask
+    data class PushFoldTask(
+        val hole: List<Card>,
+        val stackBb: Double,
+        val callPercent: Int,
+        val seat: PushSeat,
+        val result: PushFold.MultiResult,
+    ) : AdvancedTask
 
     data class CombosTask(
         val prompt: String,
@@ -136,36 +154,39 @@ class AdvancedDrills(private val random: Random) {
     // --- Push / fold ------------------------------------------------------------------
 
     /**
-     * Small blind against the big blind's calling range. Levels are margin bands: level 1
-     * spots differ by a big blind or more, level 3 ones by a fraction of it. Every answer
-     * is at least three standard errors away from the break-even point.
+     * A shove when everyone folded to the hero: from the small blind at level 1, from the
+     * button or cutoff as well later on. Levels are margin bands: level 1 spots differ by a
+     * big blind or more, level 3 ones by a fraction of it. Every answer is at least three
+     * standard errors away from the break-even point.
      */
     fun pushFold(level: Int): AdvancedTask.PushFoldTask {
         val band = when (level) { 1 -> 1.0..99.0; 2 -> 0.4..1.0; else -> 0.15..0.4 }
+        val seats = if (level == 1) listOf(PushSeat.SB) else PushSeat.entries
         val wantPush = random.nextBoolean()
         repeat(120) { attempt ->
+            val seat = seats.random(random)
             val stack = (5..15).random(random).toDouble()
             val callPercent = listOf(10, 15, 20, 30, 40, 50).random(random)
             val deck = Deck.shuffled(random)
             val hole = listOf(deck.removeLast(), deck.removeLast())
             val range = HandRange.top(callPercent / 100.0)
-            var r = PushFold.evaluate(hole, stack, range, samples = 6000, random = Random(random.nextInt()))
+            var r = seat.evaluate(hole, stack, range, 6000, Random(random.nextInt()))
             if (attempt < 80 && r.shouldPush != wantPush) return@repeat
             if (r.margin !in band) return@repeat
             if (r.margin < 3 * error(r, stack, 6000)) {
-                r = PushFold.evaluate(hole, stack, range, samples = 24000, random = Random(random.nextInt()))
+                r = seat.evaluate(hole, stack, range, 24000, Random(random.nextInt()))
                 if (r.margin !in band || r.margin < 3 * error(r, stack, 24000)) return@repeat
             }
-            return AdvancedTask.PushFoldTask(hole, stack, callPercent, r)
+            return AdvancedTask.PushFoldTask(hole, stack, callPercent, seat, r)
         }
         val hole = app.mast.poker.core.poker.cards("Ah Kd")
-        return AdvancedTask.PushFoldTask(hole, 10.0, 30, PushFold.evaluate(hole, 10.0, HandRange.top(0.30)))
+        return AdvancedTask.PushFoldTask(hole, 10.0, 30, PushSeat.SB, PushSeat.SB.evaluate(hole, 10.0, HandRange.top(0.30), 4000, Random(5)))
     }
 
     /** Standard error of the push EV that comes from the simulated equity. */
-    private fun error(r: PushFold.Result, stack: Double, samples: Int): Double {
+    private fun error(r: PushFold.MultiResult, stack: Double, samples: Int): Double {
         val eq = r.equityWhenCalled
-        return r.callChance * 2 * stack * sqrt(eq * (1 - eq) / samples)
+        return r.callChance * (2 * stack + r.steal) * sqrt(eq * (1 - eq) / samples)
     }
 
     // --- Combinatorics ----------------------------------------------------------------

@@ -90,6 +90,7 @@ object Achievements {
         Achievement("chapter_preflop2", "Три бета", "Пройди главу «Префлоп 2»", Tier.SILVER, condition = chapterDone("preflop2")),
         Achievement("chapter_tournaments", "Турнирный боец", "Пройди главу «Турниры»", Tier.GOLD, condition = chapterDone("tournaments")),
         Achievement("chapter_opponents", "Читаю людей", "Пройди главу «Соперники»", Tier.GOLD, condition = chapterDone("opponents")),
+        Achievement("chapter_postflop", "После флопа", "Пройди главу «Игра после флопа»", Tier.GOLD, condition = chapterDone("postflop")),
 
         // Экзамены
         counted("exam_first", "Печать мастера", "Сдай экзамен любой главы", Tier.BRONZE, 1) { p -> p.exams.values.count { it.passed } },

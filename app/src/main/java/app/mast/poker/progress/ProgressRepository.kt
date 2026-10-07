@@ -61,7 +61,12 @@ class ProgressRepository(
         correct: Boolean,
         extras: AnswerExtras = AnswerExtras(),
         difficulty: Int = Rating.difficulty(1),
-    ): Reward = transform { p, now -> ProgressReducer.answer(p, concept, correct, extras, now, difficulty) }
+        leaks: List<LeakEvent> = emptyList(),
+    ): Reward = transform { p, now -> ProgressReducer.answer(p, concept, correct, extras, now, difficulty, leaks) }
+
+    suspend fun recordLeaks(events: List<LeakEvent>) {
+        if (events.isNotEmpty()) store.updateData { ProgressReducer.recordLeaks(it, events) }
+    }
 
     suspend fun finishExam(chapterId: String, correct: Int, total: Int): Reward =
         transform { p, now -> ProgressReducer.finishExam(p, chapterId, correct, total, now) }

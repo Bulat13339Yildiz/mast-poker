@@ -11,7 +11,10 @@ import app.mast.poker.achievements.Achievement
 import app.mast.poker.content.Concept
 import app.mast.poker.content.DrillType
 import app.mast.poker.content.Question
+import app.mast.poker.practice.Answer
 import app.mast.poker.practice.Grader
+import app.mast.poker.practice.LeakDetector
+import app.mast.poker.practice.sim.Verdict
 import app.mast.poker.progress.DrillMode
 import app.mast.poker.progress.ProgressRepository
 import app.mast.poker.progress.Quest
@@ -49,8 +52,8 @@ class AppViewModel(private val repo: ProgressRepository) : ViewModel() {
         viewModelScope.launch { repo.completeOnboarding(goalXp) }
     }
 
-    suspend fun answer(q: Question, correct: Boolean, difficulty: Int = Rating.difficulty(1)) {
-        val r = repo.answer(q.concept, correct, Grader.extras(q, correct), difficulty)
+    suspend fun answer(q: Question, correct: Boolean, difficulty: Int = Rating.difficulty(1), given: Answer? = null) {
+        val r = repo.answer(q.concept, correct, Grader.extras(q, correct), difficulty, LeakDetector.fromAnswer(q, given, correct))
         deferred += r.achievements
         deferredQuests += r.quests
         deferredXp += r.xp
@@ -61,6 +64,11 @@ class AppViewModel(private val repo: ProgressRepository) : ViewModel() {
 
     suspend fun solvePuzzle(correct: Boolean): Reward =
         celebrate(repo.solvePuzzle(correct))
+
+    /** A simulator decision: only its leak statistics are stored. */
+    fun recordDecision(v: Verdict) {
+        viewModelScope.launch { repo.recordLeaks(LeakDetector.fromVerdict(v)) }
+    }
 
     suspend fun completeLesson(lessonId: String, correct: Int, total: Int): Reward =
         celebrate(repo.completeLesson(lessonId, correct, total))

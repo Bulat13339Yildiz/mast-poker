@@ -60,6 +60,9 @@ import app.mast.poker.core.poker.RangeEquity
 import app.mast.poker.core.poker.Suit
 import app.mast.poker.core.poker.Variance
 import app.mast.poker.practice.Explainer
+import app.mast.poker.practice.PushCharts
+import app.mast.poker.practice.PushSeat
+import app.mast.poker.ui.components.RangeGrid
 import app.mast.poker.ui.Nav
 import app.mast.poker.ui.components.GlassPanel
 import app.mast.poker.ui.components.MiniCard
@@ -464,4 +467,60 @@ private fun signedHalf(x: Double): String = when {
     x > 0 -> "+" + Explainer.bb(x)
     x < 0 -> "−" + Explainer.bb(-x)
     else -> "0"
+}
+
+// --- Push charts ---------------------------------------------------------------------------
+
+private val callerOptions = listOf(10 to "Узко · 10%", 20 to "Средне · 20%", 35 to "Широко · 35%")
+
+@Composable
+fun PushChartScreen(nav: Nav) {
+    var seat by remember { mutableStateOf(PushSeat.SB) }
+    var stack by remember { mutableFloatStateOf(10f) }
+    var callers by remember { mutableIntStateOf(1) }
+    val callPercent = callerOptions[callers].first
+    var equities by remember { mutableStateOf<Map<app.mast.poker.core.poker.StartingHand, Double>?>(null) }
+    LaunchedEffect(callPercent) {
+        equities = null
+        equities = withContext(Dispatchers.Default) { PushCharts.equities(callPercent) }
+    }
+    val eq = equities
+    val chart = remember(eq, seat, stack.roundToInt()) { eq?.let { PushCharts.chart(seat, stack.roundToInt().toDouble(), callPercent, it) } }
+
+    Column(Modifier.fillMaxSize()) {
+        TopBar("Таблицы пуш-фолда", nav::back)
+        Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            GlassPanel(Modifier.fillMaxWidth(), padding = PaddingValues(16.dp)) {
+                Text("Ты", style = MaterialTheme.typography.labelMedium, color = MastColors.TextMuted)
+                Spacer(Modifier.height(6.dp))
+                Segments(PushSeat.entries.map { it.short }, seat.ordinal) { seat = PushSeat.entries[it] }
+                Spacer(Modifier.height(12.dp))
+                Text("Стек: ${stack.roundToInt()} BB", style = MaterialTheme.typography.titleSmall, color = MastColors.TextPrimary)
+                GoldSlider(stack, { stack = it }, 5f..15f, steps = 9)
+                Text("Соперники после тебя уравнивают", style = MaterialTheme.typography.labelMedium, color = MastColors.TextMuted)
+                Spacer(Modifier.height(6.dp))
+                Segments(callerOptions.map { it.second }, callers) { callers = it }
+            }
+            GlassPanel(Modifier.fillMaxWidth(), gilded = chart != null, padding = PaddingValues(14.dp)) {
+                if (chart == null) {
+                    Text("Считаю…", style = MaterialTheme.typography.bodyMedium, color = MastColors.TextSecondary)
+                } else {
+                    Text(
+                        "Олл-ин с ${Explainer.rangeSize(chart.push)}",
+                        style = MaterialTheme.typography.titleSmall, color = MastColors.GoldLight,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    RangeGrid(chart.push)
+                }
+            }
+            Text(
+                "Расчёт как в тренажёре «Пуш или фолд»: все сбросили до тебя ${seat.ruWhere}, каждый после тебя уравнивает " +
+                    "с топ-$callPercent% рук, при колле играете на весь стек. Считаем в фишках, без ICM и анте.",
+                style = MaterialTheme.typography.bodySmall, color = MastColors.TextMuted,
+            )
+        }
+    }
 }

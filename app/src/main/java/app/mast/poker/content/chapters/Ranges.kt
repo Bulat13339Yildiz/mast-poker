@@ -190,7 +190,7 @@ val rangesChapter = Chapter(
             )
         },
 
-        lesson("ranges_read", "Сужаем диапазон", "Читаем действия соперника", minutes = 5) {
+        lesson("ranges_read", "Сужаем диапазон", "Читаем действия соперника", minutes = 5, unlocksDrill = DrillType.READ_HAND) {
             theory(
                 "Префлоп задаёт рамку",
                 """

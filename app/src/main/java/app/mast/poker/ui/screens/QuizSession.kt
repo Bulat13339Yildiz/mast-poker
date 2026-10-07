@@ -149,7 +149,7 @@ private fun SessionRound(
             shake++
             haptics.error()
         }
-        scope.launch { app.answer(state.question, f.correct, difficultyOf(state.question)) }
+        scope.launch { app.answer(state.question, f.correct, difficultyOf(state.question), state.answer) }
         if (blitz) {
             scope.launch {
                 delay(if (f.correct) 350 else 1200)

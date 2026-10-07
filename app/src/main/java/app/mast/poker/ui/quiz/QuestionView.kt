@@ -91,7 +91,7 @@ fun QuestionView(state: QuestionState, key: Any, modifier: Modifier = Modifier, 
             is Question.CallOrFold -> CallOrFoldView(q, state, select)
             is Question.OpenOrFold -> OpenOrFoldView(q, state, key, select)
             is Question.Favourite -> FavouriteView(q, state, key, select)
-            is Question.BuildRange -> BuildRangeView(q, state)
+            is Question.BuildRange -> BuildRangeView(q, state, key)
             is Question.PushOrFold -> PushOrFoldView(q, state, key, select)
         }
     }
@@ -428,11 +428,16 @@ private fun FavouriteView(q: Question.Favourite, state: QuestionState, key: Any,
 }
 
 @Composable
-private fun BuildRangeView(q: Question.BuildRange, state: QuestionState) {
+private fun BuildRangeView(q: Question.BuildRange, state: QuestionState, key: Any) {
     val selected = state.rangeSelection
     if (!state.checked) {
+        if (q.board.isNotEmpty()) {
+            HandRows(emptyList(), q.board, key)
+            Spacer(Modifier.height(10.dp))
+        }
         Text(
-            "Над диагональю — одной масти (s), под ней — разных мастей (o), на диагонали — пары. Веди пальцем, чтобы отметить сразу несколько.",
+            if (q.start.isNotEmpty()) "Золотом — его диапазон до флопа. Нажми на руку, чтобы убрать её; веди пальцем, чтобы убрать сразу несколько."
+            else "Над диагональю — одной масти (s), под ней — разных мастей (o), на диагонали — пары. Веди пальцем, чтобы отметить сразу несколько.",
             style = MaterialTheme.typography.bodySmall,
             color = MastColors.TextMuted,
         )
@@ -467,7 +472,7 @@ private fun BuildRangeView(q: Question.BuildRange, state: QuestionState) {
     } else {
         val overlap = (q.overlap(selected) * 100).roundToInt()
         Text(
-            "Совпадение $overlap% — для зачёта нужно ${(Question.BuildRange.PASS * 100).roundToInt()}%",
+            "Совпадение $overlap% — для зачёта нужно ${(q.pass * 100).roundToInt()}%",
             style = MaterialTheme.typography.titleSmall,
             color = if (q.isCorrect(selected)) MastColors.GoldLight else MastColors.Wrong,
         )
@@ -503,12 +508,16 @@ private fun PushOrFoldView(q: Question.PushOrFold, state: QuestionState, key: An
     Spacer(Modifier.height(18.dp))
     Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         InfoCell("${Explainer.bb(q.stackBb)} BB", "твой стек", Modifier.weight(1f))
-        InfoCell("топ-${q.callPercent}%", "с ними большой блайнд уравняет", Modifier.weight(1f))
+        InfoCell(
+            "топ-${q.callPercent}%",
+            if (q.playersBehind == 1) "с ними большой блайнд уравняет" else "так уравнивает каждый из ${q.playersBehind} после тебя",
+            Modifier.weight(1f),
+        )
     }
     AnimatedVisibility(state.checked, enter = fadeIn() + expandVertically()) {
         Row(Modifier.padding(top = 10.dp).height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             InfoCell("${Explainer.signedBb(q.evPush)} BB", "олл-ин в среднем", Modifier.weight(1f))
-            InfoCell("−0,5 BB", "пас", Modifier.weight(1f))
+            InfoCell(if (q.evFold < 0) "${Explainer.signedBb(q.evFold)} BB" else "0 BB", "пас", Modifier.weight(1f))
         }
     }
     Spacer(Modifier.height(22.dp))

@@ -26,6 +26,8 @@ data class UserProgress(
     val exams: Map<String, ExamRecord> = emptyMap(),
     val puzzle: PuzzleState = PuzzleState(),
     val quests: QuestState = QuestState(),
+    /** Leak name → how often that kind of spot came up and went wrong. */
+    val leaks: Map<String, LeakStat> = emptyMap(),
 ) {
     val level: Int get() = Levels.levelFor(xp)
 

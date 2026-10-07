@@ -167,6 +167,32 @@ class Level2ClaimsTest {
     }
 
     @Test
+    fun `postflop chapter numbers`() {
+        val e = EquityCalculator.headsUp(cards("Ah Kd"), cards("Qc Qs"), samples = 60_000)
+        assertEquals(43, pct(e.win + e.tie / 2))
+        assertEquals(0.39, RangeEquity.vsRange(cards("Ah Kd"), HandRange.parse("QQ+, AK"), samples = 60_000, random = Random(9)), 0.01)
+        assertEquals(0.36, RangeEquity.vsRange(cards("Ah Qd"), HandRange.top(0.05), samples = 60_000, random = Random(10)), 0.01)
+        assertEquals(0.59, RangeEquity.vsRange(cards("Ah Qd"), HandRange.top(0.20), samples = 60_000, random = Random(11)), 0.01)
+        assertEquals(0.63, RangeEquity.vsRange(cards("Ah Qd"), HandRange.top(0.50), samples = 60_000, random = Random(12)), 0.01)
+        // Bluff catching: call 50 to win 150 needs 25%; call 60 to win 120 needs 33%.
+        assertEquals(25, pct(PotOdds.requiredEquity(150, 50)))
+        assertEquals(33, pct(PotOdds.requiredEquity(120, 60)))
+        // Someone pairs the flop (with a hole card or a pocket pair): 36% / 60% / 75% for 1 / 2 / 3 opponents.
+        val rnd = Random(4)
+        listOf(1 to 0.36, 2 to 0.60, 3 to 0.75).forEach { (k, claimed) ->
+            val n = 200_000
+            var hit = 0
+            repeat(n) {
+                val deck = app.mast.poker.core.poker.Deck.shuffled(rnd)
+                val hands = List(k) { listOf(deck.removeLast(), deck.removeLast()) }
+                val flop = List(3) { deck.removeLast() }
+                if (hands.any { h -> h[0].rank == h[1].rank || h.any { c -> flop.any { it.rank == c.rank } } }) hit++
+            }
+            assertEquals("k=$k", claimed, hit.toDouble() / n, 0.01)
+        }
+    }
+
+    @Test
     fun `heads up spot from the EV lesson`() {
         val e = EquityCalculator.headsUp(cards("Ac Ad"), cards("Kc Kd"), samples = 40_000)
         assertEquals(82, pct(e.win + e.tie / 2))

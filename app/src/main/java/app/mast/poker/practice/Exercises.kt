@@ -80,14 +80,17 @@ class Exercises(private val generator: DrillGenerator = DrillGenerator(), privat
             explanation = Explainer.range(task.title, task.target, task.note),
         )
         is AdvancedTask.PushFoldTask -> Question.PushOrFold(
-            prompt = "Турнир. Все сбросили до тебя, ты на малом блайнде. Олл-ин или пас?",
+            prompt = "Турнир. Все сбросили до тебя, ты ${task.seat.ruWhere}. Олл-ин или пас?",
             hole = task.hole,
             stackBb = task.stackBb,
             callPercent = task.callPercent,
             callChance = task.result.callChance,
             equityWhenCalled = task.result.equityWhenCalled,
             evPush = task.result.evPush,
-            explanation = Explainer.pushFold(task.stackBb, task.callPercent, task.result),
+            explanation = Explainer.pushFold(task.stackBb, task.callPercent, task.seat, task.result),
+            evFold = task.result.evFold,
+            seat = task.seat.short,
+            playersBehind = task.seat.playersBehind,
         )
         is AdvancedTask.CombosTask -> Question.Choice(
             prompt = task.prompt,
@@ -117,6 +120,24 @@ class Exercises(private val generator: DrillGenerator = DrillGenerator(), privat
                 columns = 2,
             )
         }
+        is ReadingTask.ReadHand -> Question.BuildRange(
+            prompt = "Соперник открылся ${Explainer.seatFrom(task.seat)} по таблице новичка. ${task.action.story} — ${task.action.keeps}. Убери из таблицы остальные руки.",
+            target = task.target,
+            explanation = Explainer.readHand(task),
+            concept = Concept.HAND_READING,
+            start = task.start,
+            board = task.board,
+            pass = 0.8,
+        )
+        is ReadingTask.EquityVsRange -> Question.Choice(
+            prompt = "Сколько эквити у этой руки против топ-${task.percent}% рук" + (if (task.board.isEmpty()) "?" else " на этом флопе?"),
+            options = task.options.map { "≈ $it%" },
+            correct = task.options.indexOf(task.answer),
+            explanation = Explainer.rangeEquity(task.percent, task.equity),
+            concept = Concept.RANGE_EQUITY,
+            visual = Visual.Hand(task.hole, task.board),
+            columns = 2,
+        )
         is AdvancedTask.BluffMathTask -> Question.Choice(
             prompt = task.prompt,
             options = task.options,

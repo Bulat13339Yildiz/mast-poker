@@ -60,10 +60,14 @@ import app.mast.poker.ui.components.GreenChip
 import app.mast.poker.ui.components.MastIcons
 import app.mast.poker.ui.components.MiniRange
 import app.mast.poker.ui.components.PressablePanel
+import app.mast.poker.ui.components.ProgressRing
 import app.mast.poker.ui.components.SizingArt
 import app.mast.poker.ui.components.SuitBadge
 import app.mast.poker.ui.theme.MastColors
 import app.mast.poker.ui.theme.Motion
+
+/** A narrowed-down range: strong hands only — the hand-reading drill's art. */
+private val NarrowArt = app.mast.poker.core.poker.HandRange.parse("TT+, AQs+, AKo, KQs").hands
 
 @Composable
 fun DrillArt(type: DrillType, size: Dp) {
@@ -81,6 +85,12 @@ fun DrillArt(type: DrillType, size: Dp) {
         DrillType.BLUFF_MATH -> BluffArt(size)
         DrillType.SIZING -> SizingArt(size)
         DrillType.PUSH_FOLD -> AllInArt(size)
+        DrillType.READ_HAND -> Box(Modifier.size(size), contentAlignment = Alignment.Center) { MiniRange(size * 0.86f, hands = NarrowArt) }
+        DrillType.RANGE_EQUITY -> Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+            ProgressRing(0.64f, size * 0.78f, stroke = size * 0.08f) {
+                Text("64%", style = MaterialTheme.typography.labelLarge, color = MastColors.GoldLight)
+            }
+        }
     }
 }
 

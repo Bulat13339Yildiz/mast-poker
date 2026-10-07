@@ -6,6 +6,7 @@ import app.mast.poker.content.chapters.handsChapter
 import app.mast.poker.content.chapters.math2Chapter
 import app.mast.poker.content.chapters.mathChapter
 import app.mast.poker.content.chapters.opponentsChapter
+import app.mast.poker.content.chapters.postflopChapter
 import app.mast.poker.content.chapters.preflop2Chapter
 import app.mast.poker.content.chapters.preflopChapter
 import app.mast.poker.content.chapters.rangesChapter
@@ -27,6 +28,7 @@ object Curriculum {
         preflop2Chapter,
         tournamentsChapter,
         opponentsChapter,
+        postflopChapter,
     )
 
     val lessons: List<Lesson> = chapters.flatMap { it.lessons }

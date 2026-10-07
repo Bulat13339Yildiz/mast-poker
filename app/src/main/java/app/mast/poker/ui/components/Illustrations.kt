@@ -82,6 +82,7 @@ fun ChapterArt(chapterId: String, size: Dp, modifier: Modifier = Modifier) {
         "preflop2" -> FannedCards("Kh Kc", size, modifier)
         "tournaments" -> AllInArt(size, modifier)
         "opponents" -> PortraitArt("Kd", size, modifier)
+        "postflop" -> FannedCards("Jh Th", size, modifier)
         else -> ChipStacks(size, modifier)
     }
 }

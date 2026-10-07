@@ -1,5 +1,6 @@
 package app.mast.poker.ui.screens
 
+import app.mast.poker.progress.DrillMode
 import app.mast.poker.progress.Rating
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.Canvas
@@ -87,6 +88,7 @@ fun ProfileTab(nav: Nav) {
             item { LevelCard(p) }
             item { StatsGrid(p, today) }
             item { XpChart(p, today) }
+            item { LeaksCard(p) { type -> nav.drill(type, DrillMode.PRACTICE) } }
             item { ConceptAccuracy(p) }
             item { AchievementsPreview(p) { nav.achievements() } }
             item {

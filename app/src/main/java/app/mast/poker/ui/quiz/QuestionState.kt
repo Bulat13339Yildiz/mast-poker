@@ -16,7 +16,9 @@ import app.mast.poker.practice.FeedbackBuilder
 /** UI state of one question: the answer being built and, once checked, the feedback. */
 @Stable
 class QuestionState(val question: Question) {
-    var answer by mutableStateOf<Answer?>(null)
+    var answer by mutableStateOf<Answer?>(
+        (question as? Question.BuildRange)?.start?.takeIf { it.isNotEmpty() }?.let { Answer.Hands(it) },
+    )
     var feedback by mutableStateOf<Feedback?>(null)
         private set
 
@@ -33,7 +35,7 @@ class QuestionState(val question: Question) {
     }
 
     /** Hands painted so far for [Question.BuildRange]. */
-    var rangeSelection by mutableStateOf<Set<StartingHand>>(emptySet())
+    var rangeSelection by mutableStateOf((question as? Question.BuildRange)?.start ?: emptySet())
         private set
 
     fun setRange(hands: Set<StartingHand>) {

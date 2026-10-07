@@ -15,7 +15,15 @@ enum class Act(val ruName: String) { FOLD("Фолд"), CHECK("Чек"), CALL("К
 
 enum class Quality(val ruName: String) { BEST("Отлично"), OK("Допустимо"), MISTAKE("Ошибка") }
 
-data class Verdict(val street: String, val chosen: Act, val quality: Quality, val best: Act, val text: String)
+data class Verdict(
+    val street: String,
+    val chosen: Act,
+    val quality: Quality,
+    val best: Act,
+    val text: String,
+    /** The spot the decision was made in — feeds the leak statistics. */
+    val facing: Facing? = null,
+)
 
 /** What the hero is reacting to. */
 enum class Facing {
@@ -69,7 +77,7 @@ object Coach {
                 if (steal && open) "\nНа большом блайнде нит — он часто сбрасывает, кража сработает." else ""
         }
         val limp = if (chosen == Act.CALL) "\nПросто уравнять (лимп) — слабый ход: ты пускаешь всех дёшево и отдаёшь инициативу. Входи рейзом или пасуй." else ""
-        return verdict("Префлоп", chosen, if (open) Act.RAISE else Act.FOLD, emptySet(), base + limp)
+        return verdict("Префлоп", chosen, if (open) Act.RAISE else Act.FOLD, emptySet(), base + limp).copy(facing = Facing.OPEN)
     }
 
     /** Someone opened before the hero: 3-bet, call or fold. */
@@ -123,7 +131,7 @@ object Coach {
             Act.CALL -> "${hand.notation} — колл."
             else -> "${hand.notation} сюда не входит — пас."
         }
-        return verdict("Префлоп", chosen, best, ok, lines.joinToString("\n"))
+        return verdict("Префлоп", chosen, best, ok, lines.joinToString("\n")).copy(facing = Facing.VS_OPEN)
     }
 
     /** Someone limped before the hero. */
@@ -133,13 +141,13 @@ object Coach {
             val text = "Соперник просто уравнял (лимп), и на большом блайнде ты можешь посмотреть флоп бесплатно. " +
                 if (raise) "${hand.notation} — сильная рука: повышай примерно до 5 BB, иначе лимпер увидит флоп дёшево. Чек тоже допустим."
                 else "${hand.notation} недостаточно сильна, чтобы раздувать банк без позиции, — бесплатный чек."
-            return verdict("Префлоп", chosen, if (raise) Act.RAISE else Act.CHECK, if (raise) setOf(Act.CHECK) else emptySet(), text)
+            return verdict("Префлоп", chosen, if (raise) Act.RAISE else Act.CHECK, if (raise) setOf(Act.CHECK) else emptySet(), text).copy(facing = Facing.LIMPED_TO_BB)
         }
         val iso = PreflopChart.shouldOpen(hand, heroSeat.seatGroup)
         val text = "Перед тобой лимп — так часто играют слабые игроки. Против лимпера повышай примерно до 4 BB (изоляция) с руками, " +
             "с которыми открылся бы с этой позиции, остальное — пас.\n" +
             if (iso) "${hand.notation} подходит — повышай и играй со слабым игроком один на один." else "${hand.notation} не входит в диапазон — пас."
-        return verdict("Префлоп", chosen, if (iso) Act.RAISE else Act.FOLD, emptySet(), text)
+        return verdict("Префлоп", chosen, if (iso) Act.RAISE else Act.FOLD, emptySet(), text).copy(facing = Facing.VS_LIMP)
     }
 
     /** The hero raised and got 3-bet. */
@@ -165,7 +173,7 @@ object Coach {
                 Act.CALL -> "${hand.notation} — уравнивай."
                 else -> "${hand.notation} сюда не входит — пас: против такой силы рука чаще проигрывает."
             }
-        return verdict("Префлоп", chosen, best, ok, text)
+        return verdict("Префлоп", chosen, best, ok, text).copy(facing = Facing.THREE_BET)
     }
 
     /** The hero 3-bet and got 4-bet. */
@@ -186,7 +194,7 @@ object Coach {
                 hand in next -> "${hand.notation} против AA и KK сильно проигрывает — пас разумен, колл допустим."
                 else -> "${hand.notation} — пас."
             }
-        return verdict("Префлоп", chosen, best, ok, text)
+        return verdict("Префлоп", chosen, best, ok, text).copy(facing = Facing.FOUR_BET)
     }
 
     // --- Postflop -----------------------------------------------------------------------
@@ -213,7 +221,7 @@ object Coach {
             Facing.BET -> whenFacingBet(s, chosen, intro)
             Facing.RAISE -> whenFacingRaise(s, chosen, intro)
             else -> error("Not a postflop spot: ${s.facing}")
-        }
+        }.copy(facing = s.facing)
     }
 
     private fun whenNoBet(s: Spot, chosen: Act, intro: String): Verdict {

@@ -172,26 +172,32 @@ sealed interface Question {
         override val concept: Concept = Concept.STARTING_HANDS,
     ) : Question
 
-    /** Mark the hands of [target] on the 13×13 grid. Counted correct at [PASS] overlap or better. */
+    /**
+     * Mark the hands of [target] on the 13×13 grid, starting from [start] (empty, or a range
+     * to narrow down). [board] is shown above the grid. Correct at [pass] overlap or better.
+     */
     data class BuildRange(
         override val prompt: String,
         val target: Set<StartingHand>,
         override val explanation: String,
         override val concept: Concept = Concept.RANGES,
+        val start: Set<StartingHand> = emptySet(),
+        val board: List<Card> = emptyList(),
+        val pass: Double = PASS,
     ) : Question {
         fun overlap(selection: Set<StartingHand>): Double {
             val union = (selection + target).size
             return if (union == 0) 1.0 else (selection intersect target).size.toDouble() / union
         }
 
-        fun isCorrect(selection: Set<StartingHand>): Boolean = overlap(selection) >= PASS
+        fun isCorrect(selection: Set<StartingHand>): Boolean = overlap(selection) >= pass
 
         companion object {
             const val PASS = 0.9
         }
     }
 
-    /** Short-stack shove or fold from the small blind against a stated calling range. */
+    /** Short-stack shove or fold against a stated calling range. */
     data class PushOrFold(
         override val prompt: String,
         val hole: List<Card>,
@@ -202,8 +208,12 @@ sealed interface Question {
         val evPush: Double,
         override val explanation: String,
         override val concept: Concept = Concept.TOURNAMENTS,
+        /** What folding costs: the posted small blind, or nothing on the button. */
+        val evFold: Double = -0.5,
+        val seat: String = "SB",
+        val playersBehind: Int = 1,
     ) : Question {
-        val shouldPush: Boolean get() = evPush > -0.5
+        val shouldPush: Boolean get() = evPush > evFold
     }
 
     /** Which of two hands is the favourite; [equity] is the first hand's share. */
@@ -243,6 +253,9 @@ enum class Concept(val ruName: String) {
     PREFLOP_ADV("3-бет и защита блайндов"),
     TOURNAMENTS("Турниры"),
     OPPONENTS("Типы соперников"),
+    HAND_READING("Чтение руки"),
+    RANGE_EQUITY("Эквити против диапазона"),
+    POSTFLOP("Игра после флопа"),
 }
 
 enum class DrillType(val title: String, val subtitle: String, val concept: Concept) {
@@ -258,8 +271,10 @@ enum class DrillType(val title: String, val subtitle: String, val concept: Conce
     COMBOS("Комбинаторика", "Сколько комбинаций у соперника", Concept.COMBINATORICS),
     BLUFF_MATH("Математика блефа", "Как часто должен работать блеф", Concept.BLUFF_MATH),
     SIZING("Размер ставки", "Сколько ставить на этом борде", Concept.BET_SIZING),
-    PUSH_FOLD("Пуш или фолд", "Короткий стек: олл-ин или пас", Concept.TOURNAMENTS);
+    PUSH_FOLD("Пуш или фолд", "Короткий стек: олл-ин или пас", Concept.TOURNAMENTS),
+    READ_HAND("Чтение руки", "Сужай диапазон соперника по его ставкам", Concept.HAND_READING),
+    RANGE_EQUITY("Эквити против диапазона", "Сколько у руки против топ-X%", Concept.RANGE_EQUITY);
 
     /** Quick single-tap drills get a 60-second blitz; slow ones are practice only. */
-    val hasBlitz: Boolean get() = this != HAND_SIM && this != RANGES
+    val hasBlitz: Boolean get() = this != HAND_SIM && this != RANGES && this != READ_HAND
 }

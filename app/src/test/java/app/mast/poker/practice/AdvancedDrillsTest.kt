@@ -65,8 +65,9 @@ class AdvancedDrillsTest {
                 val t = drills.pushFold(level)
                 distinct(t.hole)
                 assertTrue(t.stackBb in 5.0..15.0)
-                val precise = PushFold.evaluate(t.hole, t.stackBb, HandRange.top(t.callPercent / 100.0), samples = 60_000, random = Random(99))
-                assertEquals("${t.hole} ${t.stackBb} top ${t.callPercent}: ${t.result} vs $precise", precise.shouldPush, t.result.shouldPush)
+                val precise = t.seat.evaluate(t.hole, t.stackBb, HandRange.top(t.callPercent / 100.0), 60_000, Random(99))
+                assertEquals("${t.seat} ${t.hole} ${t.stackBb} top ${t.callPercent}: ${t.result} vs $precise", precise.shouldPush, t.result.shouldPush)
+                if (level == 1) assertEquals(PushSeat.SB, t.seat)
                 if (t.result.shouldPush) pushes++
             }
             // Both answers must come up, or the drill teaches "always shove".

@@ -85,6 +85,54 @@ object PushFold {
         val margin: Double get() = abs(evPush - evFold)
     }
 
+    /** One player behind the shover: [chance] that he is the one who calls, and the hero's result then. */
+    data class Caller(val blind: Double, val chance: Double, val net: Double)
+
+    data class MultiResult(
+        val foldAll: Double,
+        val equityWhenCalled: Double,
+        val callers: List<Caller>,
+        val evPush: Double,
+        val evFold: Double,
+        /** Blinds the hero collects when everyone folds. */
+        val steal: Double,
+    ) {
+        val shouldPush: Boolean get() = evPush > evFold
+        val margin: Double get() = abs(evPush - evFold)
+        val callChance: Double get() = 1 - foldAll
+
+        /** The hero's average result when somebody calls. */
+        val netWhenCalled: Double get() = if (callChance <= 0) 0.0 else callers.sumOf { it.chance * it.net } / callChance
+    }
+
+    /**
+     * A shove of [stackBb] from any seat. [heroBlind] is what the hero already posted (0.5 in
+     * the small blind), [behind] the blinds posted by the players still to act, in order. Each
+     * of them calls with [callRange]; the first caller plays, everyone else then folds.
+     */
+    fun evaluateFrom(
+        hero: List<Card>,
+        stackBb: Double,
+        heroBlind: Double,
+        behind: List<Double>,
+        callRange: HandRange,
+        samples: Int = 4000,
+        random: Random = Random(5),
+    ): MultiResult {
+        val c = callRange.combos(hero).size / 1225.0
+        val eq = if (c == 0.0) 0.0 else RangeEquity.vsRange(hero, callRange, emptyList(), samples, random)
+        val steal = behind.sum()
+        var stillFolding = 1.0
+        val callers = behind.mapIndexed { i, blind ->
+            val chance = stillFolding * c
+            stillFolding *= 1 - c
+            val dead = steal - behind[i]
+            Caller(blind, chance, eq * (2 * stackBb + dead) - stackBb)
+        }
+        val ev = stillFolding * steal + callers.sumOf { it.chance * it.net }
+        return MultiResult(stillFolding, eq, callers, ev, -heroBlind, steal)
+    }
+
     fun evaluate(hero: List<Card>, stackBb: Double, callRange: HandRange, samples: Int = 4000, random: Random = Random(5)): Result {
         val calls = callRange.combos(hero).size
         val callChance = calls / 1225.0 // villain holds 2 of the 50 unseen cards: C(50, 2)

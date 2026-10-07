@@ -175,6 +175,7 @@ private fun HandSimSession(nav: Nav, onRestart: () -> Unit) {
                         options.forEach { o ->
                             OptionTile(o.label, OptionState.Idle, {
                                 val verdictNow = sim.act(o.act)
+                                app.recordDecision(verdictNow)
                                 allVerdicts += verdictNow
                                 lastVerdict = verdictNow
                                 view = sim.view()

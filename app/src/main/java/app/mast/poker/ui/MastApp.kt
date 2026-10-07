@@ -41,6 +41,7 @@ import app.mast.poker.ui.screens.OnboardingScreen
 import app.mast.poker.ui.screens.ReviewScreen
 import app.mast.poker.ui.screens.EquityToolScreen
 import app.mast.poker.ui.screens.ExamScreen
+import app.mast.poker.ui.screens.PushChartScreen
 import app.mast.poker.ui.screens.PuzzleScreen
 import app.mast.poker.ui.screens.VarianceToolScreen
 import app.mast.poker.ui.theme.LocalHapticsEnabled
@@ -60,6 +61,7 @@ import kotlinx.serialization.Serializable
 @Serializable object PuzzleRoute
 @Serializable object EquityToolRoute
 @Serializable object VarianceToolRoute
+@Serializable object PushChartRoute
 
 val LocalApp = compositionLocalOf<AppViewModel> { error("AppViewModel not provided") }
 val LocalSharedScope = compositionLocalOf<SharedTransitionScope?> { null }
@@ -77,6 +79,7 @@ class Nav(private val controller: NavHostController) {
     fun puzzle() = controller.navigate(PuzzleRoute)
     fun equityTool() = controller.navigate(EquityToolRoute)
     fun varianceTool() = controller.navigate(VarianceToolRoute)
+    fun pushCharts() = controller.navigate(PushChartRoute)
     fun finishOnboarding() = controller.navigate(MainRoute) { popUpTo(OnboardingRoute) { inclusive = true } }
 }
 
@@ -140,6 +143,7 @@ private fun AppNavHost(progress: UserProgress) {
                 composable<PuzzleRoute> { Scoped(this) { PuzzleScreen(nav) } }
                 composable<EquityToolRoute> { Scoped(this) { EquityToolScreen(nav) } }
                 composable<VarianceToolRoute> { Scoped(this) { VarianceToolScreen(nav) } }
+                composable<PushChartRoute> { Scoped(this) { PushChartScreen(nav) } }
             }
         }
     }

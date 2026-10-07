@@ -42,6 +42,7 @@ import app.mast.poker.core.poker.PotOdds
 import app.mast.poker.core.poker.PreflopChart
 import app.mast.poker.core.poker.SeatGroup
 import app.mast.poker.ui.Nav
+import app.mast.poker.ui.components.AllInArt
 import app.mast.poker.ui.components.FannedCards
 import app.mast.poker.ui.components.GlassPanel
 import app.mast.poker.ui.components.PressablePanel
@@ -140,6 +141,14 @@ private fun ToolsSheet(nav: Nav) {
                 "Выбери карты — узнай, как часто рука выигрывает против другой руки, случайной или целого диапазона.",
                 { FannedCards("As Kd", 64.dp) },
                 nav::equityTool,
+            )
+        }
+        item {
+            ToolTile(
+                "Таблицы пуш-фолда",
+                "С какими руками идти олл-ин с короткого стека: малый блайнд, баттон и катофф.",
+                { AllInArt(64.dp) },
+                nav::pushCharts,
             )
         }
         item {

@@ -62,6 +62,7 @@ object ProgressReducer {
         extras: AnswerExtras,
         now: Moment,
         difficulty: Int = Rating.difficulty(1),
+        leaks: List<LeakEvent> = emptyList(),
     ): Pair<UserProgress, Reward> {
         val s = p.stats
         val streak = if (correct) s.answerStreak + 1 else 0
@@ -79,7 +80,7 @@ object ProgressReducer {
             wheelsSpotted = s.wheelsSpotted + if (correct && extras.wheel) 1 else 0,
         )
         val rating = Rating.update(p.rating(concept), difficulty, correct)
-        var next = p.copy(stats = stats, ratings = p.ratings + (concept to rating))
+        var next = Leaks.record(p.copy(stats = stats, ratings = p.ratings + (concept to rating)), leaks)
         if (!correct) next = next.copy(mistakes = next.mistakes + (concept to Mistake(concept, 0, now.day)))
         return finish(p, next, 0, now)
     }
@@ -177,6 +178,8 @@ object ProgressReducer {
         val last = p.puzzle.lastDay ?: return 0
         return if (p.puzzle.lastCorrect && today - last <= 1) p.puzzle.streak else 0
     }
+
+    fun recordLeaks(p: UserProgress, events: List<LeakEvent>): UserProgress = Leaks.record(p, events)
 
     fun updateSettings(p: UserProgress, settings: Settings): UserProgress = p.copy(settings = settings)
 

@@ -19,6 +19,7 @@ import app.mast.poker.core.poker.Showdown
 import app.mast.poker.core.poker.StartingHand
 import app.mast.poker.core.poker.Suit
 import app.mast.poker.practice.Exercises.Companion.plural
+import app.mast.poker.practice.sim.Strength
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -455,19 +456,63 @@ object Explainer {
         return lines.joinToString("\n")
     }
 
+    // --- Hand reading -------------------------------------------------------------------
+
+    fun seatFrom(seat: SeatGroup): String = when (seat) {
+        SeatGroup.EARLY -> "с ранней позиции"
+        SeatGroup.MIDDLE -> "со средней позиции"
+        SeatGroup.LATE -> "с поздней позиции"
+    }
+
+    fun readHand(task: ReadingTask.ReadHand): String {
+        val lines = mutableListOf("Остаётся ${rangeSize(task.target)}.")
+        val groups = listOf(
+            Strength.STRONG to "Сильные",
+            Strength.DRAW to "Дро",
+            Strength.MEDIUM to "Средние",
+            Strength.WEAK to "Слабые",
+        )
+        for ((strength, title) in groups) {
+            val hands = task.target.filter { task.reads[it]?.strength == strength }.toSet()
+            if (hands.isNotEmpty()) lines += "$title: ${HandRange(hands).describe()}."
+        }
+        lines += "Каждую руку считаем по большинству её мастей на этом столе."
+        return lines.joinToString("\n")
+    }
+
+    // --- Equity against a range -----------------------------------------------------------
+
+    fun rangeEquity(percent: Int, equity: Double): String {
+        val range = HandRange.top(percent / 100.0)
+        val verdict = when {
+            equity >= 0.6 -> "В среднем ты заметно впереди этого диапазона."
+            equity <= 0.4 -> "В среднем этот диапазон заметно сильнее твоей руки."
+            else -> "В среднем — почти поровну: против одних его рук ты впереди, против других позади."
+        }
+        return "Точнее — ${percent1(equity)}. $verdict" + "\n" +
+            "Топ-$percent%: ${range.describe()} — ${range.comboCount} ${plural(range.comboCount, "комбинация", "комбинации", "комбинаций")}."
+    }
+
     // --- Push / fold --------------------------------------------------------------------
 
-    fun pushFold(stackBb: Double, callPercent: Int, r: PushFold.Result): String {
+    fun pushFold(stackBb: Double, callPercent: Int, seat: PushSeat, r: PushFold.MultiResult): String {
         val s = stackBb
-        val whenCalled = 2 * s * r.equityWhenCalled - s
-        val combos = (r.callChance * 1225).roundToInt()
+        val c = r.callChance
+        val net = r.netWhenCalled
+        val alone = seat.playersBehind == 1
         val lines = mutableListOf(
-            "Сбросит: ${percent1(1 - r.callChance)} — забираешь большой блайнд, +1 BB.",
-            "Уравняет: ${percent1(r.callChance)} ($combos из 1225 комбинаций). Против топ-$callPercent% у тебя ${percent1(r.equityWhenCalled)} эквити: " +
-                "банк ${bb(2 * s)} BB × ${percent1(r.equityWhenCalled)} − твои ${bb(s)} BB = ${signedBb(whenCalled)} BB.",
-            "Олл-ин в среднем: ${percent1(1 - r.callChance)} × 1 + ${percent1(r.callChance)} × (${signedBb(whenCalled)}) = ${signedBb(r.evPush)} BB.",
-            "Пас: −0,5 BB — малый блайнд уже в банке.",
+            "Все сбросят: ${percent1(r.foldAll)} — забираешь " + (if (alone) "большой блайнд" else "блайнды") + ": +${bb(r.steal)} BB.",
         )
+        lines += if (alone) {
+            val combos = (c * 1225).roundToInt()
+            "Уравняет: ${percent1(c)} ($combos из 1225 комбинаций). Против топ-$callPercent% у тебя ${percent1(r.equityWhenCalled)} эквити: " +
+                "банк ${bb(2 * s)} BB × ${percent1(r.equityWhenCalled)} − твои ${bb(s)} BB = ${signedBb(net)} BB."
+        } else {
+            "Кто-то уравняет: ${percent1(c)} — каждый из ${seat.playersBehind} игроков после тебя играет топ-$callPercent%. " +
+                "Против них у тебя ${percent1(r.equityWhenCalled)} эквити: при колле в среднем ${signedBb(net)} BB."
+        }
+        lines += "Олл-ин в среднем: ${percent1(r.foldAll)} × ${bb(r.steal)} + ${percent1(c)} × (${signedBb(net)}) = ${signedBb(r.evPush)} BB."
+        lines += if (seat.heroBlind > 0) "Пас: −0,5 BB — малый блайнд уже в банке." else "Пас: 0 BB — ты ещё ничего не поставил."
         lines += if (r.shouldPush) "Олл-ин выгоднее паса на ${bb(r.evPush - r.evFold)} BB — ставь всё."
         else "Пас выгоднее: олл-ин в среднем теряет на ${bb(r.evFold - r.evPush)} BB больше."
         return lines.joinToString("\n")
