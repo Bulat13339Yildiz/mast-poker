@@ -55,7 +55,12 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           cp app/build/outputs/apk/release/app-release.apk "mast-${GITHUB_REF_NAME}.apk"
-          gh release create "$GITHUB_REF_NAME" "mast-${GITHUB_REF_NAME}.apk" \
-            --title "Масть ${GITHUB_REF_NAME}" --notes "Установка: скачай APK на телефон и открой его. Android попросит разрешить установку из этого источника."
+          notes="docs/release-notes/${GITHUB_REF_NAME}.md"
+          if [ -f "$notes" ]; then
+            gh release create "$GITHUB_REF_NAME" "mast-${GITHUB_REF_NAME}.apk" --title "Масть ${GITHUB_REF_NAME}" --notes-file "$notes"
+          else
+            gh release create "$GITHUB_REF_NAME" "mast-${GITHUB_REF_NAME}.apk" --title "Масть ${GITHUB_REF_NAME}" \
+              --notes "Установка: скачай APK на телефон и открой его. Android попросит разрешить установку из этого источника."
+          fi
         env:
           GH_TOKEN: ${{ github.token }}
