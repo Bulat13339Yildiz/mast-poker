@@ -22,7 +22,7 @@ data class Reward(
     val leveledUp: Boolean get() = levelAfter > levelBefore
 }
 
-enum class DrillMode { PRACTICE, BLITZ }
+enum class DrillMode { PRACTICE, BLITZ, SESSION }
 
 /** Flags a single answer can carry for rare-hand achievements. */
 data class AnswerExtras(val royal: Boolean = false, val wheel: Boolean = false)

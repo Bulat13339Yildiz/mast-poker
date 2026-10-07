@@ -54,6 +54,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.mast.poker.content.DrillType
+import app.mast.poker.core.poker.Card
 import app.mast.poker.practice.Exercises
 import app.mast.poker.practice.sim.Act
 import app.mast.poker.practice.sim.HandSimulator
@@ -263,7 +264,7 @@ private fun Table(view: SimView, handNo: Int) {
 }
 
 @Composable
-private fun VerdictPanel(v: Verdict, onNext: () -> Unit) {
+internal fun VerdictPanel(v: Verdict, onNext: () -> Unit) {
     val tone = when (v.quality) {
         Quality.BEST -> MastColors.Correct
         Quality.OK -> MastColors.Gold
@@ -316,7 +317,7 @@ private fun HandOver(view: SimView, isLast: Boolean, onReview: () -> Unit, onNex
 }
 
 @Composable
-private fun StyleChip(style: VillainStyle) {
+internal fun StyleChip(style: VillainStyle) {
     Text(
         style.ruName,
         style = MaterialTheme.typography.labelSmall,
@@ -329,9 +330,16 @@ private fun StyleChip(style: VillainStyle) {
     )
 }
 
+@Composable
+private fun HistorySheet(view: SimView, onClose: () -> Unit) = HandHistorySheet(
+    listOf("Твои карты · ${view.position.short}" to view.hero, "Соперник · ${view.style.ruName.lowercase()}" to view.villain),
+    view.history,
+    onClose,
+)
+
 /** The whole hand street by street, with the coach's verdict on every decision. */
 @Composable
-private fun HistorySheet(view: SimView, onClose: () -> Unit) {
+fun HandHistorySheet(players: List<Pair<String, List<Card>?>>, history: List<HistoryEntry>, onClose: () -> Unit) {
     Box(
         Modifier
             .fillMaxSize()
@@ -354,21 +362,22 @@ private fun HistorySheet(view: SimView, onClose: () -> Unit) {
                 RoundIconButton(MastIcons.Close, "Закрыть", onClose, size = 40.dp)
             }
             Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("Твои карты · ${view.position.short}", style = MaterialTheme.typography.labelSmall, color = MastColors.TextMuted)
-                    Spacer(Modifier.height(4.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) { view.hero.forEach { MiniCard(it, 30.dp) } }
-                }
-                Column(Modifier.weight(1f)) {
-                    Text("Соперник · ${view.style.ruName.lowercase()}", style = MaterialTheme.typography.labelSmall, color = MastColors.TextMuted)
-                    Spacer(Modifier.height(4.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) { view.villain.forEach { MiniCard(it, 30.dp) } }
+            players.chunked(2).forEach { pair ->
+                Row(Modifier.padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    pair.forEach { (label, cards) ->
+                        Column(Modifier.weight(1f)) {
+                            Text(label, style = MaterialTheme.typography.labelSmall, color = MastColors.TextMuted)
+                            Spacer(Modifier.height(4.dp))
+                            if (cards != null) Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) { cards.forEach { MiniCard(it, 30.dp) } }
+                            else Text("карты не показаны", style = MaterialTheme.typography.bodySmall, color = MastColors.TextMuted)
+                        }
+                    }
+                    if (pair.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(4.dp))
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                view.history.forEach { e ->
+                history.forEach { e ->
                     when (e) {
                         is HistoryEntry.Street -> StreetHeader(e)
                         is HistoryEntry.Line -> HistoryLine(e)

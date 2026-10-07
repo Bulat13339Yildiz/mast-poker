@@ -32,7 +32,7 @@ private const val BLITZ_SECONDS = 60
 @Composable
 fun DrillScreen(type: DrillType, mode: DrillMode, nav: Nav) {
     if (type == DrillType.HAND_SIM) {
-        HandSimScreen(nav)
+        if (mode == DrillMode.SESSION) SessionScreen(nav) else HandSimScreen(nav)
         return
     }
     val app = LocalApp.current

@@ -63,6 +63,9 @@ enum class VillainStyle(
         callMediumBig = 0.75f, callWeak = 0.3f, raiseMonster = 0.5f, raiseBluff = 0.15f,
     );
 
+    /** A label that fits a seat at the session table. */
+    val short: String get() = if (this == FISH) "Колл-ст." else ruName
+
     /** Plays many hands and rarely folds or rarely stops betting — the coach adapts to both. */
     val loose: Boolean get() = this == LAG || this == MANIAC || this == FISH
     val wild: Boolean get() = this == LAG || this == MANIAC

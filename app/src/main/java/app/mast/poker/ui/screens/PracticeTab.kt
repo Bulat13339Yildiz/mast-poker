@@ -215,6 +215,10 @@ private fun ModeSheet(type: DrillType, onPick: (DrillMode) -> Unit) {
         }
         Spacer(Modifier.height(16.dp))
         ModeOption("Практика", if (type == DrillType.HAND_SIM) "5 раздач с разбором каждого решения" else "10 заданий с подробным разбором", MastIcons.Learn) { onPick(DrillMode.PRACTICE) }
+        if (type == DrillType.HAND_SIM) {
+            Spacer(Modifier.height(10.dp))
+            ModeOption("Сессия", "12 раздач за столом на шестерых: стек переходит из раздачи в раздачу", MastIcons.Play) { onPick(DrillMode.SESSION) }
+        }
         if (type.hasBlitz) {
             Spacer(Modifier.height(10.dp))
             ModeOption("Блиц", "60 секунд — сколько успеешь", MastIcons.Timer) { onPick(DrillMode.BLITZ) }

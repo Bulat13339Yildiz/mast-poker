@@ -430,11 +430,11 @@ private fun FavouriteView(q: Question.Favourite, state: QuestionState, key: Any,
 @Composable
 private fun BuildRangeView(q: Question.BuildRange, state: QuestionState, key: Any) {
     val selected = state.rangeSelection
+    if (q.board.isNotEmpty()) {
+        HandRows(emptyList(), q.board, key)
+        Spacer(Modifier.height(10.dp))
+    }
     if (!state.checked) {
-        if (q.board.isNotEmpty()) {
-            HandRows(emptyList(), q.board, key)
-            Spacer(Modifier.height(10.dp))
-        }
         Text(
             if (q.start.isNotEmpty()) "Золотом — его диапазон до флопа. Нажми на руку, чтобы убрать её; веди пальцем, чтобы убрать сразу несколько."
             else "Над диагональю — одной масти (s), под ней — разных мастей (o), на диагонали — пары. Веди пальцем, чтобы отметить сразу несколько.",

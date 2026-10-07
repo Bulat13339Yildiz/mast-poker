@@ -59,7 +59,7 @@ import kotlinx.serialization.Serializable
 @Serializable object MainRoute
 @Serializable data class ChapterRoute(val id: String)
 @Serializable data class LessonRoute(val id: String)
-@Serializable data class DrillRoute(val type: String, val blitz: Boolean)
+@Serializable data class DrillRoute(val type: String, val mode: String)
 @Serializable object ReviewRoute
 @Serializable object AchievementsRoute
 @Serializable data class ExamRoute(val chapterId: String)
@@ -77,7 +77,7 @@ class Nav(private val controller: NavHostController) {
     fun back() = controller.popBackStack()
     fun chapter(id: String) = controller.navigate(ChapterRoute(id))
     fun lesson(id: String) = controller.navigate(LessonRoute(id))
-    fun drill(type: DrillType, mode: DrillMode) = controller.navigate(DrillRoute(type.name, mode == DrillMode.BLITZ))
+    fun drill(type: DrillType, mode: DrillMode) = controller.navigate(DrillRoute(type.name, mode.name))
     fun review() = controller.navigate(ReviewRoute)
     fun achievements() = controller.navigate(AchievementsRoute)
     fun exam(chapterId: String) = controller.navigate(ExamRoute(chapterId))
@@ -150,7 +150,7 @@ private fun AppNavHost(progress: UserProgress) {
                 composable<LessonRoute> { Scoped(this) { LessonScreen(it.toRoute<LessonRoute>().id, nav) } }
                 composable<DrillRoute> {
                     val r = it.toRoute<DrillRoute>()
-                    Scoped(this) { DrillScreen(DrillType.valueOf(r.type), if (r.blitz) DrillMode.BLITZ else DrillMode.PRACTICE, nav) }
+                    Scoped(this) { DrillScreen(DrillType.valueOf(r.type), DrillMode.valueOf(r.mode), nav) }
                 }
                 composable<ReviewRoute> { Scoped(this) { ReviewScreen(nav) } }
                 composable<AchievementsRoute> { Scoped(this) { AchievementsScreen(nav) } }

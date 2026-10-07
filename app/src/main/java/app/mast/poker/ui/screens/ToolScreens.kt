@@ -475,7 +475,7 @@ private val callerOptions = listOf(10 to "Узко · 10%", 20 to "Средне 
 
 @Composable
 fun PushChartScreen(nav: Nav) {
-    var seat by remember { mutableStateOf(PushSeat.SB) }
+    var seat by remember { mutableStateOf(PushSeat.BTN) }
     var stack by remember { mutableFloatStateOf(10f) }
     var callers by remember { mutableIntStateOf(1) }
     val callPercent = callerOptions[callers].first

@@ -81,7 +81,7 @@ object Coach {
     }
 
     /** Someone opened before the hero: 3-bet, call or fold. */
-    fun preflopVsOpen(hand: StartingHand, heroSeat: Position, opener: Position, style: VillainStyle, chosen: Act): Verdict {
+    fun preflopVsOpen(hand: StartingHand, heroSeat: Position, opener: Position, style: VillainStyle, chosen: Act, callers: Int = 0): Verdict {
         val premium = range("QQ+, AK")
         val strong = range("JJ, TT, AQ")
         val wideCalls = range("99-77, AJs, ATs, KQs, KJs, QJs")
@@ -99,6 +99,10 @@ object Coach {
                 lines += "Нит открывается только с сильными руками: AQ против него часто доминирована, JJ и TT лучше просто уравнять."
             }
             else -> call += strong
+        }
+        if (callers > 0) {
+            call -= range("AQ")
+            lines += "Перед тобой ещё и колл: банк будет на троих. Уравнивай только пары, AQ — пас, а 3-бет делай крупнее — на рейз больше за каждого, кто уравнял."
         }
         when (heroSeat) {
             Position.BB -> {
@@ -124,6 +128,7 @@ object Coach {
             best == Act.RAISE && hand !in premium -> setOf(Act.CALL)
             best == Act.CALL && hand in strong -> setOf(Act.RAISE)
             style == VillainStyle.NIT && hand in range("AQ") -> setOf(Act.CALL)
+            callers > 0 && hand in range("AQ") -> setOf(Act.CALL)
             else -> emptySet()
         }
         lines += when (best) {
@@ -176,6 +181,21 @@ object Coach {
         return verdict("Префлоп", chosen, best, ok, text).copy(facing = Facing.THREE_BET)
     }
 
+    /** A raise and a 3-bet happened before the hero put any money in. */
+    fun preflopVsColdThreeBet(hand: StartingHand, chosen: Act): Verdict {
+        val top = range("KK+")
+        val next = range("QQ, AK")
+        val best = if (hand in top) Act.RAISE else Act.FOLD
+        val ok = when {
+            hand in top -> setOf(Act.CALL)
+            hand in next -> setOf(Act.CALL)
+            else -> emptySet()
+        }
+        val text = "Перед тобой рейз и ещё 3-бет — у обоих сильные диапазоны. Здесь играют только AA и KK (4-бет); QQ и AK — пас или осторожный колл.\n" +
+            if (hand in top) "${hand.notation} — повышай." else "${hand.notation} — пас."
+        return verdict("Префлоп", chosen, best, ok, text).copy(facing = Facing.THREE_BET)
+    }
+
     /** The hero 3-bet and got 4-bet. */
     fun preflopVs4bet(hand: StartingHand, chosen: Act, style: VillainStyle): Verdict {
         val top = range("KK+")
@@ -210,12 +230,15 @@ object Coach {
         val river: Boolean,
         val unseen: Int,
         val style: VillainStyle? = null,
+        /** Opponents still in the hand; two or more is a multiway pot. */
+        val opponents: Int = 1,
     ) {
         val flop: Boolean get() = street == "Флоп"
     }
 
     fun postflop(s: Spot, chosen: Act): Verdict {
         val intro = "У тебя ${s.read.label} — ${s.read.strength.ruName}."
+        if (s.opponents >= 2 && s.facing != Facing.RAISE) return multiway(s, chosen, intro).copy(facing = s.facing)
         return when (s.facing) {
             Facing.FIRST, Facing.CHECKED_TO -> whenNoBet(s, chosen, intro)
             Facing.BET -> whenFacingBet(s, chosen, intro)
@@ -256,6 +279,27 @@ object Coach {
                 else ->
                     verdict(s.street, chosen, Act.CHECK, emptySet(), "$intro Без пары и без дро лучше чек: блеф против соперника, который заплатит, стоит дорого." + if (s.wet) " Борд мокрый — у соперника много попаданий и дро." else "")
             }
+        }
+    }
+
+    /** Two or more opponents: fewer bluffs, more respect for bets — the «Банк на троих» lesson. */
+    private fun multiway(s: Spot, chosen: Act, intro: String): Verdict {
+        if (s.facing == Facing.FIRST || s.facing == Facing.CHECKED_TO) {
+            return when (s.read.strength) {
+                Strength.STRONG -> verdict(s.street, chosen, Act.BET, emptySet(), "$intro С сильной рукой ставь: когда соперников несколько, кто-то из них чаще заплатит.")
+                Strength.DRAW -> verdict(s.street, chosen, Act.CHECK, setOf(Act.BET), "$intro Против нескольких соперников полублеф срабатывает реже — сбросить должны все. Бери карту дёшево; ставка тоже допустима.")
+                Strength.MEDIUM -> verdict(s.street, chosen, Act.CHECK, emptySet(), "$intro Средняя рука в банке на троих часто позади — чек.")
+                Strength.WEAK -> verdict(s.street, chosen, Act.CHECK, emptySet(), "$intro Против нескольких соперников блеф почти не работает: сбросить должны все. Чек.")
+            }
+        }
+        val betShare = s.toCall.toDouble() / (s.pot - s.toCall).coerceAtLeast(1)
+        return when (s.read.strength) {
+            Strength.MEDIUM -> if (betShare <= 0.34) {
+                verdict(s.street, chosen, Act.CALL, setOf(Act.FOLD), "$intro Ставка маленькая — около ${pct(betShare)} банка, а в банке много фишек. Колл допустим, но с осторожностью.")
+            } else {
+                verdict(s.street, chosen, Act.FOLD, emptySet(), "$intro Против ставки в банке на троих средняя рука часто проигрывает: кто-то из соперников мог попасть сильно. Пас.")
+            }
+            else -> whenFacingBet(s.copy(style = null), chosen, intro)
         }
     }
 
