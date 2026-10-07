@@ -1,6 +1,9 @@
 package app.mast.poker.ui
 
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -33,11 +36,18 @@ sealed interface Celebration {
 }
 
 /** Session-wide state: progress, and the queue of celebrations shown over any screen. */
-class AppViewModel(private val repo: ProgressRepository) : ViewModel() {
+class AppViewModel(private val repo: ProgressRepository, private val context: android.content.Context? = null) : ViewModel() {
 
     val progress: StateFlow<UserProgress?> = repo.progress.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     val celebrations = mutableStateListOf<Celebration>()
+
+    /** A screen requested from outside — a notification or the widget. */
+    var pendingOpen by mutableStateOf<String?>(null)
+
+    fun requestOpen(target: String?) {
+        if (target != null) pendingOpen = target
+    }
 
     /** Achievements earned mid-session (e.g. answer streaks) — shown when the session ends. */
     private val deferred = mutableListOf<Achievement>()
@@ -104,6 +114,7 @@ class AppViewModel(private val repo: ProgressRepository) : ViewModel() {
         deferredXp = 0
         if (r.leveledUp) celebrations += Celebration.LevelUp(r.levelAfter)
         celebrations += all.map { Celebration.NewAchievement(it) }
+        context?.let { app.mast.poker.habit.PuzzleWidget.refresh(it) }
         return r.copy(achievements = all, quests = quests, xp = r.xp + extraXp)
     }
 
@@ -111,7 +122,7 @@ class AppViewModel(private val repo: ProgressRepository) : ViewModel() {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as MastApplication
-                AppViewModel(app.progress)
+                AppViewModel(app.progress, app)
             }
         }
     }

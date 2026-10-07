@@ -16,7 +16,7 @@ data class Feedback(
 
 object FeedbackBuilder {
 
-    private val goodHeadlines = listOf("Верно!", "В масть!", "Точно!", "Именно так!")
+    private val goodHeadlines = listOf("Верно!", "В точку!", "Точно!", "Именно так!")
     private val badHeadlines = listOf("Не совсем", "Почти", "Разберём")
 
     fun build(q: Question, a: Answer): Feedback {

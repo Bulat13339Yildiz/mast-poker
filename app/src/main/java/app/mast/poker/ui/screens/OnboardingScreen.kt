@@ -119,7 +119,7 @@ fun OnboardingScreen(nav: Nav) {
 @Composable
 private fun PageText(title: String, body: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        GoldLabel("Масть")
+        GoldLabel("Hold 'em")
         Spacer(Modifier.height(12.dp))
         Text(title, style = MaterialTheme.typography.displaySmall, color = MastColors.TextPrimary, textAlign = TextAlign.Center)
         Spacer(Modifier.height(12.dp))

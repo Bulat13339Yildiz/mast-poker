@@ -102,6 +102,11 @@ data class Mistake(val concept: Concept, val level: Int, val dueDay: Long)
 data class Settings(
     val haptics: Boolean = true,
     val reducedMotion: Boolean = false,
+    /** Daily "streak in danger" notification at [reminderHour]. */
+    val reminders: Boolean = false,
+    val reminderHour: Int = 20,
+    /** Quiet card and chip sounds. */
+    val sounds: Boolean = false,
 )
 
 data class LevelTitle(val fromLevel: Int, val title: String)

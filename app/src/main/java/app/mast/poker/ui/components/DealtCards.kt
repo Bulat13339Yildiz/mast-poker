@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.mast.poker.core.poker.Card
 import app.mast.poker.ui.theme.LocalReducedMotion
+import app.mast.poker.ui.theme.LocalSounds
 import app.mast.poker.ui.theme.Motion
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -43,6 +44,7 @@ fun DealtCard(
     onClick: (() -> Unit)? = null,
 ) {
     val reduced = LocalReducedMotion.current
+    val sounds = LocalSounds.current
     val enter = remember(dealKey) { Animatable(if (reduced) 1f else 0f) }
     val flip = remember(dealKey) { Animatable(if (reduced && faceUp) 1f else 0f) }
 
@@ -53,6 +55,7 @@ fun DealtCard(
             return@LaunchedEffect
         }
         delay(baseDelayMs + index * Motion.DealStagger.toLong())
+        sounds.card()
         launch { enter.animateTo(1f, spring(dampingRatio = 0.72f, stiffness = 260f)) }
         if (faceUp) {
             delay(150)

@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.mast.poker.content.DrillType
 import app.mast.poker.practice.Exercises
+import app.mast.poker.practice.sim.Act
 import app.mast.poker.practice.sim.HandSimulator
 import app.mast.poker.practice.sim.HistoryEntry
 import app.mast.poker.practice.sim.Quality
@@ -79,6 +80,7 @@ import app.mast.poker.ui.components.RichText
 import app.mast.poker.ui.components.RollingNumber
 import app.mast.poker.ui.components.SecondaryButton
 import app.mast.poker.ui.components.drawChip
+import app.mast.poker.ui.theme.LocalSounds
 import app.mast.poker.ui.theme.MastColors
 import app.mast.poker.ui.theme.Motion
 import app.mast.poker.ui.theme.Playfair
@@ -99,6 +101,7 @@ private fun HandSimSession(nav: Nav, onRestart: () -> Unit) {
     val app = LocalApp.current
     val scope = rememberCoroutineScope()
     val haptics = rememberHaptics()
+    val sounds = LocalSounds.current
     var handNo by remember { mutableIntStateOf(1) }
     val sim = remember(handNo) { HandSimulator() }
     var view by remember(handNo) { mutableStateOf(sim.view()) }
@@ -174,6 +177,7 @@ private fun HandSimSession(nav: Nav, onRestart: () -> Unit) {
                     options.isNotEmpty() -> Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         options.forEach { o ->
                             OptionTile(o.label, OptionState.Idle, {
+                                if (o.act == Act.CALL || o.act == Act.BET || o.act == Act.RAISE) sounds.chip()
                                 val verdictNow = sim.act(o.act)
                                 app.recordDecision(verdictNow)
                                 allVerdicts += verdictNow

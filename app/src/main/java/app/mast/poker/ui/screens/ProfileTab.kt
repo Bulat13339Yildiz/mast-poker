@@ -1,5 +1,10 @@
 package app.mast.poker.ui.screens
 
+import app.mast.poker.habit.Reminders
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
+import android.os.Build
+import android.Manifest
 import app.mast.poker.progress.DrillMode
 import app.mast.poker.progress.Rating
 import androidx.compose.animation.core.Animatable
@@ -77,6 +82,13 @@ fun ProfileTab(nav: Nav) {
     val p = progress ?: return
     val today = app.today()
     var confirmReset by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+            app.updateSettings { it.copy(reminders = true) }
+            Reminders.apply(context, true, p.settings.reminderHour)
+        }
+    }
 
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
@@ -96,6 +108,19 @@ fun ProfileTab(nav: Nav) {
                     p,
                     onHaptics = { v -> app.updateSettings { it.copy(haptics = v) } },
                     onReduced = { v -> app.updateSettings { it.copy(reducedMotion = v) } },
+                    onSounds = { v -> app.updateSettings { it.copy(sounds = v) } },
+                    onReminders = { v ->
+                        if (v && !Reminders.canNotify(context) && Build.VERSION.SDK_INT >= 33) {
+                            askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        } else {
+                            app.updateSettings { it.copy(reminders = v) }
+                            Reminders.apply(context, v, p.settings.reminderHour)
+                        }
+                    },
+                    onHour = { h ->
+                        app.updateSettings { it.copy(reminderHour = h) }
+                        Reminders.apply(context, p.settings.reminders, h)
+                    },
                     onGoal = { app.setDailyGoal(it) },
                     onReset = { confirmReset = true },
                 )
@@ -261,12 +286,43 @@ private fun AchievementsPreview(p: UserProgress, onOpen: () -> Unit) {
 }
 
 @Composable
-private fun SettingsCard(p: UserProgress, onHaptics: (Boolean) -> Unit, onReduced: (Boolean) -> Unit, onGoal: (Int) -> Unit, onReset: () -> Unit) {
+private fun SettingsCard(
+    p: UserProgress,
+    onHaptics: (Boolean) -> Unit,
+    onReduced: (Boolean) -> Unit,
+    onSounds: (Boolean) -> Unit,
+    onReminders: (Boolean) -> Unit,
+    onHour: (Int) -> Unit,
+    onGoal: (Int) -> Unit,
+    onReset: () -> Unit,
+) {
     GlassPanel(Modifier.fillMaxWidth()) {
         GoldLabel("Настройки")
         Spacer(Modifier.height(8.dp))
         ToggleRow("Вибрация", "Отклик на верные и неверные ответы", p.settings.haptics, onHaptics)
         ToggleRow("Меньше анимаций", "Карты появляются без полёта и переворотов", p.settings.reducedMotion, onReduced)
+        ToggleRow("Звуки", "Тихий шелест карт и стук фишек", p.settings.sounds, onSounds)
+        ToggleRow("Напоминание о серии", "Если в этот день ты ещё не занимался", p.settings.reminders, onReminders)
+        if (p.settings.reminders) {
+            Row(Modifier.padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(18, 20, 22).forEach { hour ->
+                    val on = p.settings.reminderHour == hour
+                    Text(
+                        "$hour:00",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (on) MastColors.FeltDeep else MastColors.TextSecondary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(50))
+                            .background(if (on) MastColors.Gold else MastColors.Glass)
+                            .border(1.dp, if (on) MastColors.Gold else MastColors.GlassStroke, RoundedCornerShape(50))
+                            .clickable(role = Role.RadioButton) { onHour(hour) }
+                            .padding(vertical = 8.dp),
+                    )
+                }
+            }
+        }
         Spacer(Modifier.height(8.dp))
         Text("Дневная цель", style = MaterialTheme.typography.titleSmall, color = MastColors.TextPrimary)
         Spacer(Modifier.height(8.dp))
@@ -321,7 +377,7 @@ private fun About() {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: ""
     }
     Text(
-        "Масть $version · обучающее приложение без игры на деньги и без рекламы.\nИгра на деньги — только 18+. Шрифт Playfair Display — SIL Open Font License.",
+        "Hold 'em $version · обучающее приложение без игры на деньги и без рекламы.\nИгра на деньги — только 18+. Шрифт Playfair Display — SIL Open Font License.",
         style = MaterialTheme.typography.bodySmall,
         color = MastColors.TextMuted,
         textAlign = TextAlign.Center,

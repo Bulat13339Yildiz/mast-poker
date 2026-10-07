@@ -51,7 +51,7 @@ object Achievements {
         counted("perfect_5", "Перфекционист", "Пройди 5 уроков без ошибок", Tier.SILVER, 5) { it.stats.perfectLessons },
 
         // Точность
-        counted("streak_10", "В масть", "Ответь верно 10 раз подряд", Tier.BRONZE, 10) { it.stats.bestAnswerStreak },
+        counted("streak_10", "В точку", "Ответь верно 10 раз подряд", Tier.BRONZE, 10) { it.stats.bestAnswerStreak },
         counted("streak_20", "Снайпер", "Ответь верно 20 раз подряд", Tier.SILVER, 20) { it.stats.bestAnswerStreak },
         counted("streak_50", "Хладнокровие", "Ответь верно 50 раз подряд", Tier.GOLD, 50) { it.stats.bestAnswerStreak },
         counted("answers_100", "Сотня", "Дай 100 верных ответов", Tier.BRONZE, 100) { it.stats.answersCorrect },

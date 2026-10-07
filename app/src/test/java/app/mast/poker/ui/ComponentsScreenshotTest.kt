@@ -60,7 +60,7 @@ class ComponentsScreenshotTest {
                 MastTheme {
                     FeltScreen {
                         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            Text("Масть", style = MaterialTheme.typography.displayMedium, color = MastColors.Gold)
+                            Text("Hold 'em", style = MaterialTheme.typography.displayMedium, color = MastColors.Gold)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 cards("As Kh Qd Jc Th").forEach { PlayingCard(it, 64.dp) }
                             }

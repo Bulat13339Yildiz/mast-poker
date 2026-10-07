@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Масть</string>
+    <string name="app_name">"Hold 'em"</string>
+    <string name="widget_name">Задача дня</string>
+    <string name="widget_description">Задача дня и серия — прямо на главном экране</string>
 </resources>
